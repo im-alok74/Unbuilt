@@ -34,3 +34,6 @@ yarn-error.log*
 
 # drizzle
 /drizzle/meta/_journal.json.bak
+.deploy.json
+.deploy*.json*
+.deploy-lines.jsonl
