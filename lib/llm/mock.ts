@@ -92,6 +92,94 @@ const BY_CATEGORY: Record<
       ["Ongoing care", "Managing long-term conditions with a steady hand."],
     ],
   },
+  bakery: {
+    tagline: "Baked fresh, every morning",
+    headline: "The smell of fresh bread, every day",
+    sub: "Breads, cakes and pastries made from scratch on-site. Order ahead for celebrations.",
+    cta: "See what's baking",
+    services: [
+      ["Daily bakes", "Sourdough, soft rolls and everything in between."],
+      ["Cakes to order", "Birthdays, anniversaries and 'just because'."],
+      ["Coffee & a seat", "A warm corner to enjoy it in."],
+    ],
+  },
+  bar: {
+    tagline: "Your local, done right",
+    headline: "A proper local worth walking to",
+    sub: "A tight drinks list, easy food, and a room that's actually nice to sit in.",
+    cta: "See what's on",
+    services: [
+      ["Drinks", "Craft on tap, honest wine, cocktails without the fuss."],
+      ["Kitchen", "Small plates and sharing boards till late."],
+      ["Book the space", "Corners and back rooms for groups."],
+    ],
+  },
+  spa: {
+    tagline: "Switch off for an hour",
+    headline: "An hour that's entirely yours",
+    sub: "Massage, facials and body treatments in a calm, spotless space.",
+    cta: "Book a treatment",
+    services: [
+      ["Massage", "Deep tissue, relaxation, and everything between."],
+      ["Facials", "Matched to your skin, not a template."],
+      ["Packages", "Half-days and gift vouchers."],
+    ],
+  },
+  nail_salon: {
+    tagline: "Nails that last",
+    headline: "Careful hands, colours that don't chip by Tuesday",
+    sub: "Manicures, pedicures and gel work in a clean, unhurried studio.",
+    cta: "Book a slot",
+    services: [
+      ["Manicure & pedicure", "Classic and gel, done properly."],
+      ["Nail art", "As subtle or as bold as you want."],
+      ["Repairs", "Quick fixes when one goes."],
+    ],
+  },
+  plumber: {
+    tagline: "Turn up. Fix it. Tidy up.",
+    headline: "A plumber who calls back",
+    sub: "Leaks, blockages, installs and emergencies — clear pricing before any work starts.",
+    cta: "Get a callout",
+    services: [
+      ["Repairs & leaks", "Found fast, fixed properly."],
+      ["Bathrooms & kitchens", "Full installs and swap-outs."],
+      ["Emergencies", "Same-day for the ones that can't wait."],
+    ],
+  },
+  electrician: {
+    tagline: "Safe, tidy, certified",
+    headline: "Electrical work done to the letter",
+    sub: "Rewires, faults, extra sockets and inspections — certified and signed off.",
+    cta: "Request a quote",
+    services: [
+      ["Fault finding", "Tracing the problem, not guessing."],
+      ["Installations", "Sockets, lighting, EV points, fuse boards."],
+      ["Safety checks", "Certificates for landlords and sales."],
+    ],
+  },
+  car_repair: {
+    tagline: "Honest work on your car",
+    headline: "Repairs without the runaround",
+    sub: "Diagnostics, servicing and repairs with a quote you can trust before we start.",
+    cta: "Book it in",
+    services: [
+      ["Servicing", "Routine work that keeps small things small."],
+      ["Repairs", "Brakes, clutches, suspension, electrics."],
+      ["Diagnostics", "Warning light? We'll tell you what it actually is."],
+    ],
+  },
+  clothing_store: {
+    tagline: "Pieces worth keeping",
+    headline: "A wardrobe you'll actually wear",
+    sub: "A tight, well-chosen range and staff who'll tell you the truth about the fit.",
+    cta: "Visit the shop",
+    services: [
+      ["In store", "New arrivals every week, in-person fitting."],
+      ["Alterations", "Small tweaks that make a big difference."],
+      ["Personal picks", "Tell us the occasion, we'll pull options."],
+    ],
+  },
 };
 
 const GENERIC = {

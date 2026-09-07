@@ -159,7 +159,7 @@ export function mockSearch(
     const reviewCount = Math.floor(rand() ** 2 * 220);
     const photos = Array.from({ length: Math.min(photoCount, 6) }, (_, k) => ({
       name: `mock/${slug(name)}/${k}`,
-      uri: `https://images.unsplash.com/photo-15${(seedFrom(lat, lng) % 90) + 10}?q=80&w=1200&sig=${i}${k}`,
+      uri: `https://picsum.photos/seed/${slug(name)}-${k}/1200/800`,
       widthPx: 1200,
       heightPx: 800,
     }));
