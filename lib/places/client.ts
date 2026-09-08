@@ -96,7 +96,9 @@ async function callSearchNearby(
 ): Promise<{ ok: true; places: RawPlace[] } | { ok: false; status: number; body: string }> {
   const body: Record<string, unknown> = {
     maxResultCount: 20,
-    rankPreference: "POPULARITY",
+    // DISTANCE (not POPULARITY): return the 20 *nearest* to each tile centre, so
+    // small independent businesses are captured instead of only the famous chains.
+    rankPreference: "DISTANCE",
     locationRestriction: {
       circle: {
         center: { latitude: tile.lat, longitude: tile.lng },

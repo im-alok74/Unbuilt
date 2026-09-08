@@ -99,11 +99,22 @@ export function ScanControls({ onScanned }: { onScanned: () => void }) {
           <span>10 km</span>
         </div>
 
-        {estimate && !estimate.mock && estimate.heavy && (
-          <div className="mt-2 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
+        {estimate && !estimate.mock && (
+          <div
+            className={`mt-2 flex items-start gap-2 rounded-lg px-3 py-2 text-[11px] ${
+              estimate.heavy ? "bg-amber-50 text-amber-700" : "bg-gray-50 text-gray-500"
+            }`}
+          >
             <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-            Large area — this fans out into {estimate.tiles} sub-searches (~
-            {estimate.apiCalls} calls). Shrink the radius to save quota.
+            {estimate.apiCalls === 1 ? (
+              "1 Places call — a quick look, ~20 businesses."
+            ) : (
+              <>
+                Thorough sweep: {estimate.tiles} overlapping searches (~
+                {estimate.apiCalls} Places calls) to catch the small independent
+                businesses, not just the big chains. Shrink the radius for fewer calls.
+              </>
+            )}
           </div>
         )}
 
