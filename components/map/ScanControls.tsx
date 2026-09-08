@@ -14,7 +14,14 @@ export function ScanControls({ onScanned }: { onScanned: () => void }) {
   const { push } = useToast();
   const [estimate, setEstimate] = React.useState<ScanEstimate | null>(null);
   const [scanning, setScanning] = React.useState(false);
+  const [allTypes, setAllTypes] = React.useState(false);
   const [lastResult, setLastResult] = React.useState<{ n: number; nu: number } | null>(null);
+
+  React.useEffect(() => {
+    try {
+      setAllTypes(localStorage.getItem("unbuilt.scanAll") === "1");
+    } catch {}
+  }, []);
 
   React.useEffect(() => {
     let alive = true;
@@ -38,7 +45,7 @@ export function ScanControls({ onScanned }: { onScanned: () => void }) {
       const res = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat: drop.lat, lng: drop.lng, radiusM }),
+        body: JSON.stringify({ lat: drop.lat, lng: drop.lng, radiusM, allBusinesses: allTypes }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "scan failed");
@@ -100,9 +107,27 @@ export function ScanControls({ onScanned }: { onScanned: () => void }) {
           </div>
         )}
 
+        <label className="mt-2 flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700">
+          <span>
+            Include every business type
+            <span className="ml-1 text-gray-400">(not just your priority list)</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={allTypes}
+            onChange={(e) => {
+              setAllTypes(e.target.checked);
+              try {
+                localStorage.setItem("unbuilt.scanAll", e.target.checked ? "1" : "0");
+              } catch {}
+            }}
+            className="h-4 w-4 accent-accent"
+          />
+        </label>
+
         {lastResult && (
           <div className="mt-2 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
-            <Check size={13} /> {lastResult.n} found, {lastResult.nu} new — pins updated.
+            <Check size={13} /> {lastResult.n} found, {lastResult.nu} new — all saved.
           </div>
         )}
 

@@ -129,39 +129,56 @@ export async function runScan(args: ScanArgs): Promise<ScanOutcome> {
       lastScannedAt: now,
     }));
 
-    // Bulk upsert in chunks (keeps each statement well within limits).
-    const CHUNK = 100;
+    // Bulk upsert in small chunks. Each chunk is isolated so one bad row can't
+    // lose the whole scan — every business the Places API returned gets persisted.
+    const CHUNK = 40;
+    const conflictSet = {
+      name: sql`excluded.name`,
+      category: sql`excluded.category`,
+      categoryLabel: sql`excluded.category_label`,
+      types: sql`excluded.types`,
+      address: sql`excluded.address`,
+      lat: sql`excluded.lat`,
+      lng: sql`excluded.lng`,
+      phone: sql`excluded.phone`,
+      websiteRaw: sql`excluded.website_raw`,
+      websiteStatus: sql`excluded.website_status`,
+      rating: sql`excluded.rating`,
+      reviewCount: sql`excluded.review_count`,
+      photoCount: sql`excluded.photo_count`,
+      businessStatus: sql`excluded.business_status`,
+      hoursJson: sql`excluded.hours_json`,
+      photosJson: sql`excluded.photos_json`,
+      score: sql`excluded.score`,
+      scoreBreakdown: sql`excluded.score_breakdown`,
+      rawJson: sql`excluded.raw_json`,
+      lastScannedAt: sql`excluded.last_scanned_at`,
+    };
+
     for (let i = 0; i < values.length; i += CHUNK) {
-      const upserted = await db
-        .insert(businesses)
-        .values(values.slice(i, i + CHUNK))
-        .onConflictDoUpdate({
-          target: businesses.placeId,
-          set: {
-            name: sql`excluded.name`,
-            category: sql`excluded.category`,
-            categoryLabel: sql`excluded.category_label`,
-            types: sql`excluded.types`,
-            address: sql`excluded.address`,
-            lat: sql`excluded.lat`,
-            lng: sql`excluded.lng`,
-            phone: sql`excluded.phone`,
-            websiteRaw: sql`excluded.website_raw`,
-            websiteStatus: sql`excluded.website_status`,
-            rating: sql`excluded.rating`,
-            reviewCount: sql`excluded.review_count`,
-            photoCount: sql`excluded.photo_count`,
-            businessStatus: sql`excluded.business_status`,
-            hoursJson: sql`excluded.hours_json`,
-            photosJson: sql`excluded.photos_json`,
-            score: sql`excluded.score`,
-            scoreBreakdown: sql`excluded.score_breakdown`,
-            rawJson: sql`excluded.raw_json`,
-            lastScannedAt: sql`excluded.last_scanned_at`,
-          },
-        })
-        .returning({ id: businesses.id });
-      for (const r of upserted) businessIds.push(r.id);
+      const chunk = values.slice(i, i + CHUNK);
+      try {
+        const upserted = await db
+          .insert(businesses)
+          .values(chunk)
+          .onConflictDoUpdate({ target: businesses.placeId, set: conflictSet })
+          .returning({ id: businesses.id });
+        for (const r of upserted) businessIds.push(r.id);
+      } catch (err) {
+        console.error("[scan] chunk upsert failed, retrying rows individually", err);
+        for (const row of chunk) {
+          try {
+            const one = await db
+              .insert(businesses)
+              .values(row)
+              .onConflictDoUpdate({ target: businesses.placeId, set: conflictSet })
+              .returning({ id: businesses.id });
+            if (one[0]) businessIds.push(one[0].id);
+          } catch (e2) {
+            console.error("[scan] row upsert failed", row.placeId, e2);
+          }
+        }
+      }
     }
 
     if (businessIds.length) {

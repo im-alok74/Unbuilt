@@ -49,6 +49,10 @@ interface AppState {
   detailId: string | null;
   openDetail: (id: string) => void;
   closeDetail: () => void;
+  /** Compact pin card shown on the map before the full panel. */
+  previewId: string | null;
+  openPreview: (id: string) => void;
+  closePreview: () => void;
   /** Revalidate every list/config query after a mutation. */
   refreshAll: () => void;
   /** Drop point shared between map sessions. */
@@ -72,6 +76,7 @@ export function useApp() {
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [detailId, setDetailId] = React.useState<string | null>(null);
+  const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [drop, setDropState] = React.useState<{ lat: number; lng: number } | null>(null);
   const [radiusM, setRadiusM] = React.useState(1500);
   const [lastScanAt, setLastScanAt] = React.useState(0);
@@ -112,8 +117,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value: AppState = {
     detailId,
-    openDetail: setDetailId,
+    openDetail: (id: string) => {
+      setPreviewId(null);
+      setDetailId(id);
+    },
     closeDetail: () => setDetailId(null),
+    previewId,
+    openPreview: (id: string) => {
+      setDetailId(null);
+      setPreviewId(id);
+    },
+    closePreview: () => setPreviewId(null),
     refreshAll,
     drop,
     setDrop,

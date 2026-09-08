@@ -10,14 +10,30 @@ import { TopBar } from "@/components/map/TopBar";
 import { FilterSheet } from "@/components/FilterSheet";
 import { ScanControls } from "@/components/map/ScanControls";
 import { MapKey, useMapKey } from "@/components/map/MapKey";
+import { MapPreviewCard } from "@/components/map/MapPreviewCard";
 
 export function MapScreen() {
   const { config } = useConfig();
-  const { filters, drop, radiusM, setDrop, openDetail, lastScanAt } = useApp();
+  const {
+    filters,
+    drop,
+    radiusM,
+    setDrop,
+    openDetail,
+    openPreview,
+    previewId,
+    closePreview,
+    lastScanAt,
+  } = useApp();
   const { push } = useToast();
   const query = filtersToQuery(filters);
   const { businesses, refresh } = useBusinesses(query);
   const mapKey = useMapKey();
+
+  const previewBusiness = React.useMemo(
+    () => (previewId ? businesses.find((b) => b.id === previewId) ?? null : null),
+    [previewId, businesses],
+  );
 
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [recenter, setRecenter] = React.useState(0);
@@ -96,8 +112,11 @@ export function MapScreen() {
           businesses={businesses}
           drop={drop}
           radiusM={radiusM}
-          onDrop={(p) => setDrop(p)}
-          onPick={openDetail}
+          onDrop={(p) => {
+            closePreview();
+            setDrop(p);
+          }}
+          onPick={openPreview}
           recenterSignal={recenter}
           flyTo={flyTo}
         />
@@ -106,11 +125,16 @@ export function MapScreen() {
           businesses={businesses}
           drop={drop}
           radiusM={radiusM}
-          onDrop={(p) => setDrop(p)}
-          onPick={openDetail}
+          onDrop={(p) => {
+            closePreview();
+            setDrop(p);
+          }}
+          onPick={openPreview}
           recenterSignal={recenter}
         />
       )}
+
+      {previewBusiness && <MapPreviewCard business={previewBusiness} />}
 
       <TopBar
         count={businesses.length}
@@ -122,7 +146,7 @@ export function MapScreen() {
 
       <MapKey open={mapKey.open} onClose={mapKey.close} />
 
-      <ScanControls onScanned={refresh} />
+      {!previewBusiness && <ScanControls onScanned={refresh} />}
 
       <FilterSheet
         open={filterOpen}
