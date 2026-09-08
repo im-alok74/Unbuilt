@@ -4,7 +4,7 @@ import * as React from "react";
 import "mapbox-gl/dist/mapbox-gl.css";
 import type { Map as MbMap, Marker as MbMarker } from "mapbox-gl";
 import type { BusinessRow } from "@/lib/types";
-import { pinBucket } from "@/lib/scoring/score";
+import { pinColor, PIN_HEX } from "@/lib/scoring/score";
 import { truncate } from "@/lib/utils";
 
 interface Props {
@@ -12,7 +12,6 @@ interface Props {
   businesses: BusinessRow[];
   drop: { lat: number; lng: number } | null;
   radiusM: number;
-  mode: "drop" | "scan" | "idle";
   onDrop: (p: { lat: number; lng: number }) => void;
   onPick: (id: string) => void;
   recenterSignal: number;
@@ -20,22 +19,12 @@ interface Props {
 }
 
 const DEFAULT_CENTER: [number, number] = [77.209, 28.6139];
+const ACCENT = "#12B76A";
 
 function esc(s: string) {
-  return s.replace(/[&<>"']/g, (c) => {
-    switch (c) {
-      case "&":
-        return "&amp;";
-      case "<":
-        return "&lt;";
-      case ">":
-        return "&gt;";
-      case '"':
-        return "&quot;";
-      default:
-        return "&#39;";
-    }
-  });
+  return s.replace(/[&<>"']/g, (c) =>
+    c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;",
+  );
 }
 
 function circlePolygon(lat: number, lng: number, radiusM: number) {
@@ -59,7 +48,6 @@ export function MapCanvas({
   businesses,
   drop,
   radiusM,
-  mode,
   onDrop,
   onPick,
   recenterSignal,
@@ -69,16 +57,13 @@ export function MapCanvas({
   const mapRef = React.useRef<MbMap | null>(null);
   const markersRef = React.useRef<Map<string, MbMarker>>(new Map());
   const dropMarkerRef = React.useRef<MbMarker | null>(null);
-  const modeRef = React.useRef(mode);
   const onDropRef = React.useRef(onDrop);
   const onPickRef = React.useRef(onPick);
   const [ready, setReady] = React.useState(false);
 
-  modeRef.current = mode;
   onDropRef.current = onDrop;
   onPickRef.current = onPick;
 
-  // ── init ────────────────────────────────────────────────────────────────────
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -87,9 +72,9 @@ export function MapCanvas({
       mapboxgl.accessToken = token;
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: "mapbox://styles/mapbox/dark-v11",
+        style: "mapbox://styles/mapbox/light-v11",
         center: drop ? [drop.lng, drop.lat] : DEFAULT_CENTER,
-        zoom: drop ? 14.5 : 11,
+        zoom: drop ? 14.8 : 11,
         pitch: 55,
         bearing: -17,
         antialias: true,
@@ -98,7 +83,6 @@ export function MapCanvas({
       mapRef.current = map;
 
       map.on("style.load", () => {
-        // Warm amber 3D building extrusions.
         const layers = map.getStyle().layers ?? [];
         const labelLayer = layers.find(
           (l) => l.type === "symbol" && (l.layout as { "text-field"?: unknown })?.["text-field"],
@@ -117,15 +101,15 @@ export function MapCanvas({
                   ["linear"],
                   ["get", "height"],
                   0,
-                  "#3a2c1c",
+                  "#EDE7DA",
                   40,
-                  "#6b4f2f",
-                  120,
-                  "#8a6a3e",
+                  "#E3DACA",
+                  140,
+                  "#D8CCB8",
                 ],
                 "fill-extrusion-height": ["get", "height"],
                 "fill-extrusion-base": ["get", "min_height"],
-                "fill-extrusion-opacity": 0.85,
+                "fill-extrusion-opacity": 0.92,
               },
             },
             labelLayer?.id,
@@ -140,24 +124,24 @@ export function MapCanvas({
           id: "scan-radius-fill",
           type: "fill",
           source: "scan-radius",
-          paint: { "fill-color": "#F5A623", "fill-opacity": 0.08 },
+          paint: { "fill-color": ACCENT, "fill-opacity": 0.07 },
         });
         map.addLayer({
           id: "scan-radius-line",
           type: "line",
           source: "scan-radius",
           paint: {
-            "line-color": "#F5A623",
+            "line-color": ACCENT,
             "line-width": 1.5,
             "line-dasharray": [2, 2],
-            "line-opacity": 0.6,
+            "line-opacity": 0.8,
           },
         });
+        map.getCanvas().style.cursor = "crosshair";
         setReady(true);
       });
 
       map.on("click", (e) => {
-        if (modeRef.current !== "drop") return;
         onDropRef.current({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       });
     })();
@@ -168,14 +152,7 @@ export function MapCanvas({
     };
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── cursor for drop mode ────────────────────────────────────────────────────
-  React.useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
-    map.getCanvas().style.cursor = mode === "drop" ? "crosshair" : "";
-  }, [mode, ready]);
-
-  // ── drop marker + radius ────────────────────────────────────────────────────
+  // drop marker + radius
   React.useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
@@ -184,7 +161,7 @@ export function MapCanvas({
       if (drop) {
         const el = document.createElement("div");
         el.innerHTML =
-          '<svg width="26" height="30" viewBox="0 0 26 30" fill="none"><path d="M13 0C6 0 1 5 1 12c0 8 12 18 12 18s12-10 12-18C25 5 20 0 13 0Z" fill="#3B82F6" stroke="#0b0d10" stroke-width="1.5"/><circle cx="13" cy="12" r="4" fill="#fff"/></svg>';
+          '<svg width="26" height="30" viewBox="0 0 26 30" fill="none"><path d="M13 0C6 0 1 5 1 12c0 8 12 18 12 18s12-10 12-18C25 5 20 0 13 0Z" fill="#2E90FA" stroke="#fff" stroke-width="1.5"/><circle cx="13" cy="12" r="4" fill="#fff"/></svg>';
         if (!dropMarkerRef.current) {
           dropMarkerRef.current = new mapboxgl.Marker({ element: el, anchor: "bottom" })
             .setLngLat([drop.lng, drop.lat])
@@ -197,9 +174,7 @@ export function MapCanvas({
         dropMarkerRef.current = null;
       }
 
-      const src = map.getSource("scan-radius") as
-        | { setData: (d: unknown) => void }
-        | undefined;
+      const src = map.getSource("scan-radius") as { setData: (d: unknown) => void } | undefined;
       src?.setData(
         drop
           ? { type: "FeatureCollection", features: [circlePolygon(drop.lat, drop.lng, radiusM)] }
@@ -208,7 +183,6 @@ export function MapCanvas({
     })();
   }, [drop?.lat, drop?.lng, radiusM, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── recenter / flyTo ────────────────────────────────────────────────────────
   React.useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
@@ -216,14 +190,14 @@ export function MapCanvas({
     if (target) {
       map.flyTo({
         center: [target.lng, target.lat],
-        zoom: (flyTo?.zoom ?? 14.6),
+        zoom: flyTo?.zoom ?? 14.8,
         pitch: 55,
         duration: 900,
       });
     }
   }, [recenterSignal, flyTo?.lat, flyTo?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── business markers ────────────────────────────────────────────────────────
+  // business markers
   React.useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
@@ -233,9 +207,7 @@ export function MapCanvas({
       for (const b of businesses) {
         if (b.lat == null || b.lng == null) continue;
         seen.add(b.id);
-        const bucket = pinBucket(b.score, b.leadStatus, b.siteStatus);
-        const color =
-          bucket === "pink" ? "#EC4899" : bucket === "amber" ? "#F5A623" : "#3FB65B";
+        const color = PIN_HEX[pinColor(b.websiteStatus, b.leadStatus)];
         let marker = markersRef.current.get(b.id);
         if (!marker) {
           const el = document.createElement("button");
@@ -245,21 +217,15 @@ export function MapCanvas({
             ev.stopPropagation();
             onPickRef.current(b.id);
           });
-          marker = new mapboxgl.Marker({ element: el, anchor: "center" }).setLngLat([
-            b.lng,
-            b.lat,
-          ]);
+          marker = new mapboxgl.Marker({ element: el, anchor: "center" }).setLngLat([b.lng, b.lat]);
           marker.addTo(map);
           markersRef.current.set(b.id, marker);
         } else {
           marker.setLngLat([b.lng, b.lat]);
         }
-        const el = marker.getElement();
-        el.innerHTML = `
-          <span style="display:block;width:12px;height:12px;border-radius:9999px;background:${color};box-shadow:${
-            bucket !== "green" ? `0 0 0 5px ${color}22` : "0 0 0 2px rgba(0,0,0,0.4)"
-          }"></span>
-          <span class="map-pin-label" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.85)">${esc(
+        marker.getElement().innerHTML = `
+          <span style="display:block;width:13px;height:13px;border-radius:9999px;background:${color};box-shadow:0 0 0 3px #fff,0 1px 4px rgba(0,0,0,0.25)"></span>
+          <span class="map-pin-label" style="position:absolute;left:17px;top:50%;transform:translateY(-50%)">${esc(
             truncate(b.name, 6),
           )}</span>`;
       }
@@ -272,8 +238,8 @@ export function MapCanvas({
     })();
   }, [businesses, ready]);
 
-  // Outer wrapper keeps the sizing: mapbox-gl.css forces `position: relative` on
-  // the container element it's given, which would collapse `absolute inset-0`.
+  // Outer wrapper keeps sizing: mapbox-gl.css forces `position: relative` on its
+  // container, which would collapse `absolute inset-0`.
   return (
     <div className="absolute inset-0">
       <div ref={containerRef} className="h-full w-full" />

@@ -155,14 +155,30 @@ export function scoreNormalized(
   );
 }
 
-/** Pin colour bucket for the map. */
-export function pinBucket(
-  score: number,
+export type PinColor = "orange" | "pink" | "green" | "blue" | "purple" | "red";
+
+export const PIN_HEX: Record<PinColor, string> = {
+  orange: "#F79009",
+  pink: "#F6699E",
+  green: "#12B76A",
+  blue: "#2E90FA",
+  purple: "#8B5CF6",
+  red: "#F04438",
+};
+
+/**
+ * Map-pin colour. Lead status wins (talking / client / no-go), otherwise the
+ * website situation decides: no site = orange (the opportunity), social-only =
+ * pink, real site = green.
+ */
+export function pinColor(
+  websiteStatus: WebsiteStatus,
   leadStatus: string,
-  siteStatus: string | null,
-): "green" | "amber" | "pink" {
-  if (leadStatus === "won" || siteStatus === "live") return "green";
-  if (score >= 70) return "pink";
-  if (score >= 40) return "amber";
+): PinColor {
+  if (leadStatus === "lost") return "red";
+  if (leadStatus === "won") return "purple";
+  if (leadStatus === "quoted") return "blue";
+  if (websiteStatus === "none") return "orange";
+  if (websiteStatus === "social") return "pink";
   return "green";
 }

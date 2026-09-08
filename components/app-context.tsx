@@ -56,8 +56,6 @@ interface AppState {
   setDrop: (p: { lat: number; lng: number } | null) => void;
   radiusM: number;
   setRadiusM: (m: number) => void;
-  mapMode: "drop" | "scan" | "idle";
-  setMapMode: (m: "drop" | "scan" | "idle") => void;
   lastScanAt: number;
   markScanned: () => void;
   filters: LeadFilters;
@@ -76,7 +74,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [detailId, setDetailId] = React.useState<string | null>(null);
   const [drop, setDropState] = React.useState<{ lat: number; lng: number } | null>(null);
   const [radiusM, setRadiusM] = React.useState(1500);
-  const [mapMode, setMapMode] = React.useState<"drop" | "scan" | "idle">("drop");
   const [lastScanAt, setLastScanAt] = React.useState(0);
   const [filters, setFilters] = React.useState<LeadFilters>(EMPTY_FILTERS);
 
@@ -122,8 +119,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDrop,
     radiusM,
     setRadiusM: setRadius,
-    mapMode,
-    setMapMode,
     lastScanAt,
     markScanned: () => setLastScanAt(Date.now()),
     filters,

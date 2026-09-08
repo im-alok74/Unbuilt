@@ -90,12 +90,12 @@ export function DetailPanel() {
         onClick={closeDetail}
       />
       <aside
-        className={`fixed inset-y-0 right-0 z-[101] w-full max-w-md overflow-y-auto bg-ink-950 shadow-chrome transition-transform duration-200 ${
+        className={`fixed inset-y-0 right-0 z-[101] w-full max-w-md overflow-y-auto bg-white shadow-chrome transition-transform duration-200 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {isLoading && !b && (
-          <div className="flex h-full items-center justify-center text-white/50">
+          <div className="flex h-full items-center justify-center text-gray-400">
             <Spinner className="h-6 w-6" />
           </div>
         )}
@@ -103,11 +103,11 @@ export function DetailPanel() {
           <div className="space-y-5 p-5 pb-24">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold leading-tight text-white">{b.name}</h2>
-                <p className="text-xs text-white/50">
+                <h2 className="text-lg font-semibold leading-tight text-gray-900">{b.name}</h2>
+                <p className="text-xs text-gray-400">
                   {b.categoryLabel ?? b.category ?? "Business"}
                   {b.businessStatus && b.businessStatus !== "OPERATIONAL" && (
-                    <span className="ml-2 text-red-300">
+                    <span className="ml-2 text-red-600">
                       {b.businessStatus.replace(/_/g, " ").toLowerCase()}
                     </span>
                   )}
@@ -115,14 +115,14 @@ export function DetailPanel() {
               </div>
               <button
                 onClick={closeDetail}
-                className="rounded-full p-1.5 text-white/60 hover:bg-white/10"
+                className="rounded-full p-1.5 text-gray-600 hover:bg-gray-100"
               >
                 <X size={18} />
               </button>
             </div>
 
             {b.stale && (
-              <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+              <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700">
                 <AlertTriangle size={13} />
                 Data is over 30 days old — re-scan this area to refresh it.
               </div>
@@ -130,12 +130,12 @@ export function DetailPanel() {
 
             <div className="flex flex-wrap gap-2 text-xs">
               {b.rating != null && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/8 px-2 py-1 text-white/80">
+                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-800">
                   <Star size={12} className="fill-accent text-accent" />
                   {b.rating.toFixed(1)} · {b.reviewCount} reviews
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/8 px-2 py-1 text-white/80">
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-gray-800">
                 {b.photoCount} photos
               </span>
               {b.websiteStatus === "none" && <Badge tone="pink">No website</Badge>}
@@ -143,28 +143,28 @@ export function DetailPanel() {
               {b.websiteStatus === "real" && <Badge tone="green">Has website</Badge>}
             </div>
 
-            <div className="rounded-xl bg-white/5 p-4">
+            <div className="rounded-xl bg-gray-50 p-4">
               <ScoreBreakdown score={b.score} factors={b.scoreBreakdown} />
             </div>
 
             <div className="space-y-2 text-sm">
               {b.address && (
-                <p className="flex items-start gap-2 text-white/75">
-                  <MapPin size={14} className="mt-0.5 shrink-0 text-white/40" />
+                <p className="flex items-start gap-2 text-gray-600">
+                  <MapPin size={14} className="mt-0.5 shrink-0 text-gray-400" />
                   {b.address}
                 </p>
               )}
               {b.phone && (
-                <p className="flex items-center gap-2 text-white/75">
-                  <Phone size={14} className="shrink-0 text-white/40" />
+                <p className="flex items-center gap-2 text-gray-600">
+                  <Phone size={14} className="shrink-0 text-gray-400" />
                   <a href={`tel:${b.phone}`} className="hover:text-accent">
                     {b.phone}
                   </a>
                 </p>
               )}
               {b.websiteRaw && (
-                <p className="flex items-center gap-2 text-white/75">
-                  <Globe size={14} className="shrink-0 text-white/40" />
+                <p className="flex items-center gap-2 text-gray-600">
+                  <Globe size={14} className="shrink-0 text-gray-400" />
                   <a
                     href={b.websiteRaw}
                     target="_blank"
@@ -188,11 +188,11 @@ export function DetailPanel() {
             </div>
 
             {b.hours?.weekdayDescriptions?.length ? (
-              <details className="rounded-xl bg-white/5 p-3 text-sm">
-                <summary className="flex cursor-pointer items-center gap-2 text-white/70">
-                  <Clock size={14} className="text-white/40" /> Opening hours
+              <details className="rounded-xl bg-gray-50 p-3 text-sm">
+                <summary className="flex cursor-pointer items-center gap-2 text-gray-600">
+                  <Clock size={14} className="text-gray-400" /> Opening hours
                 </summary>
-                <ul className="mt-2 space-y-0.5 text-xs text-white/60">
+                <ul className="mt-2 space-y-0.5 text-xs text-gray-600">
                   {b.hours.weekdayDescriptions.map((d, i) => (
                     <li key={i}>{d}</li>
                   ))}
@@ -216,33 +216,33 @@ export function DetailPanel() {
               </div>
             )}
 
-            <div className="space-y-3 border-t border-white/10 pt-4">
+            <div className="space-y-3 border-t border-gray-200 pt-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="mb-1 text-xs font-medium text-white/60">Lead status</p>
+                  <p className="mb-1 text-xs font-medium text-gray-600">Lead status</p>
                   <StatusControl businessId={b.id} value={b.leadStatus} onChanged={() => refresh()} />
                 </div>
                 <div>
-                  <p className="mb-1 text-xs font-medium text-white/60">Site</p>
-                  <p className="flex h-9 items-center text-sm text-white/70">
+                  <p className="mb-1 text-xs font-medium text-gray-600">Site</p>
+                  <p className="flex h-9 items-center text-sm text-gray-600">
                     {b.siteStatus ? (
                       <>
                         <span className="capitalize">{SITE_STATUS_LABELS[b.siteStatus]}</span>
                         {b.quotePrice ? (
-                          <span className="ml-2 text-white/40">
+                          <span className="ml-2 text-gray-400">
                             {formatINR(b.quotePrice)}
                           </span>
                         ) : null}
                       </>
                     ) : (
-                      <span className="text-white/35">Not built</span>
+                      <span className="text-gray-300">Not built</span>
                     )}
                   </p>
                 </div>
               </div>
 
               <div>
-                <p className="mb-1 text-xs font-medium text-white/60">Notes</p>
+                <p className="mb-1 text-xs font-medium text-gray-600">Notes</p>
                 <Textarea
                   rows={3}
                   value={notes}
@@ -268,7 +268,7 @@ export function DetailPanel() {
               </Button>
             </div>
 
-            <p className="text-center text-[10px] text-white/30">
+            <p className="text-center text-[10px] text-gray-300">
               Last scanned {timeAgo(b.lastScannedAt)} · {b.placeId.startsWith("mock_") ? "demo data" : "Google Places"}
             </p>
           </div>

@@ -6,9 +6,9 @@ export type WebsiteStatus = "none" | "social" | "real" | "unknown";
 
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   not_contacted: "Not contacted",
-  quoted: "Quoted",
-  won: "Won",
-  lost: "Lost",
+  quoted: "Talking",
+  won: "Client",
+  lost: "No-go",
 };
 
 export const SITE_STATUS_LABELS: Record<SiteStatus, string> = {

@@ -52,12 +52,12 @@ function LeadPicker({ onPick }: { onPick: (id: string) => void }) {
   return (
     <div className="min-h-[100dvh] px-3 pb-28 pt-[max(14px,env(safe-area-inset-top))]">
       <div className="mx-auto max-w-2xl">
-        <h1 className="text-xl font-semibold text-white">Build a site</h1>
-        <p className="mb-4 text-xs text-white/45">Pick a lead to build a one-page site for.</p>
+        <h1 className="text-xl font-semibold text-gray-900">Build a site</h1>
+        <p className="mb-4 text-xs text-gray-400">Pick a lead to build a one-page site for.</p>
         {isLoading ? (
-          <p className="py-10 text-center text-sm text-white/40">Loading…</p>
+          <p className="py-10 text-center text-sm text-gray-400">Loading…</p>
         ) : businesses.length === 0 ? (
-          <p className="py-10 text-center text-sm text-white/40">
+          <p className="py-10 text-center text-sm text-gray-400">
             No leads yet — scan an area on the map first.
           </p>
         ) : (
@@ -70,12 +70,12 @@ function LeadPicker({ onPick }: { onPick: (id: string) => void }) {
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-white">{b.name}</span>
+                    <span className="font-medium text-gray-900">{b.name}</span>
                     <ScoreBadge score={b.score} />
                   </div>
-                  <span className="text-xs text-white/45">{b.categoryLabel ?? b.category}</span>
+                  <span className="text-xs text-gray-400">{b.categoryLabel ?? b.category}</span>
                 </div>
-                <div className="text-xs text-white/50">
+                <div className="text-xs text-gray-400">
                   {b.siteStatus ? SITE_STATUS_LABELS[b.siteStatus] : "New"}
                 </div>
               </button>
@@ -201,14 +201,14 @@ function BuildForLead({
 
   if (loading) {
     return (
-      <div className="grid min-h-[100dvh] place-items-center text-white/50">
+      <div className="grid min-h-[100dvh] place-items-center text-gray-400">
         <Spinner className="h-6 w-6" />
       </div>
     );
   }
 
   if (!business) {
-    return <p className="p-10 text-center text-sm text-white/40">Lead not found.</p>;
+    return <p className="p-10 text-center text-sm text-gray-400">Lead not found.</p>;
   }
 
   // ── Template picker ─────────────────────────────────────────────────────────
@@ -218,12 +218,12 @@ function BuildForLead({
         <div className="mx-auto max-w-2xl">
           <button
             onClick={() => history.back()}
-            className="mb-2 inline-flex items-center gap-1 text-xs text-white/50 hover:text-white"
+            className="mb-2 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-900"
           >
             <ArrowLeft size={13} /> Back
           </button>
-          <h1 className="text-xl font-semibold text-white">{business.name}</h1>
-          <p className="mb-4 text-xs text-white/45">
+          <h1 className="text-xl font-semibold text-gray-900">{business.name}</h1>
+          <p className="mb-4 text-xs text-gray-400">
             Pick a starter template. Copy is auto-written from the Google listing
             {isNew ? "" : ""}.
           </p>
@@ -243,10 +243,10 @@ function BuildForLead({
                   </div>
                   <div className="p-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-white">{t.name}</span>
+                      <span className="font-medium text-gray-900">{t.name}</span>
                       {creating === t.id && <Spinner className="h-3 w-3 text-accent" />}
                     </div>
-                    <p className="mt-0.5 text-[11px] leading-snug text-white/45">{t.blurb}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-gray-400">{t.blurb}</p>
                   </div>
                 </button>
               );
@@ -261,19 +261,19 @@ function BuildForLead({
   const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/s/${site.slug}`;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-ink-950">
-      <div className="flex items-center justify-between gap-2 border-b border-white/8 px-3 py-2 pt-[max(8px,env(safe-area-inset-top))]">
+    <div className="fixed inset-0 flex flex-col bg-white">
+      <div className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 pt-[max(8px,env(safe-area-inset-top))]">
         <button
           onClick={() => history.back()}
-          className="inline-flex items-center gap-1 text-xs text-white/55 hover:text-white"
+          className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft size={14} /> {business.name}
         </button>
         <div className="flex items-center gap-2">
-          {saving && <Spinner className="h-3.5 w-3.5 text-white/40" />}
+          {saving && <Spinner className="h-3.5 w-3.5 text-gray-400" />}
           <button
             onClick={() => setPreview(true)}
-            className="inline-flex items-center gap-1 rounded-full bg-white/8 px-3 py-1.5 text-xs text-white"
+            className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1.5 text-xs text-gray-900"
           >
             <Eye size={13} /> Preview
           </button>
@@ -284,8 +284,8 @@ function BuildForLead({
       </div>
 
       {/* preview canvas */}
-      <div className="flex-1 overflow-y-auto bg-[#0f1216] p-3">
-        <div className="mx-auto max-w-3xl overflow-hidden rounded-xl border border-white/10 bg-white shadow-chrome">
+      <div className="flex-1 overflow-y-auto bg-gray-100 p-3">
+        <div className="mx-auto max-w-3xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-chrome">
           <SiteTemplate
             templateId={site.template}
             theme={site.theme}
@@ -295,16 +295,16 @@ function BuildForLead({
             onContent={onContent}
           />
         </div>
-        <p className="py-3 text-center text-[11px] text-white/30">
+        <p className="py-3 text-center text-[11px] text-gray-300">
           Click any text to edit it inline
         </p>
       </div>
 
       {/* controls */}
-      <div className="border-t border-white/10 bg-ink-950">
+      <div className="border-t border-gray-200 bg-white">
         <button
           onClick={() => setPanelOpen((o) => !o)}
-          className="flex w-full items-center justify-between px-4 py-2 text-xs font-medium text-white/60"
+          className="flex w-full items-center justify-between px-4 py-2 text-xs font-medium text-gray-600"
         >
           Site controls
           <ChevronDown size={16} className={cn("transition", panelOpen && "rotate-180")} />
@@ -312,7 +312,7 @@ function BuildForLead({
         {panelOpen && (
           <div className="max-h-[46vh] space-y-4 overflow-y-auto px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-1">
             <div>
-              <p className="mb-1.5 text-[11px] font-medium text-white/50">Template</p>
+              <p className="mb-1.5 text-[11px] font-medium text-gray-400">Template</p>
               <div className="no-scrollbar flex gap-2 overflow-x-auto">
                 {TEMPLATES.map((t) => (
                   <button
@@ -320,7 +320,7 @@ function BuildForLead({
                     onClick={() => patch({ template: t.id })}
                     className={cn(
                       "shrink-0 rounded-full px-3 py-1.5 text-xs",
-                      site.template === t.id ? "bg-accent text-ink-950" : "bg-white/8 text-white/60",
+                      site.template === t.id ? "bg-accent text-white" : "bg-gray-100 text-gray-600",
                     )}
                   >
                     {t.name}
@@ -330,7 +330,7 @@ function BuildForLead({
             </div>
 
             <div>
-              <p className="mb-1.5 text-[11px] font-medium text-white/50">Theme</p>
+              <p className="mb-1.5 text-[11px] font-medium text-gray-400">Theme</p>
               <div className="flex flex-wrap gap-2">
                 {(TEMPLATES.find((t) => t.id === site.template)?.themes ?? []).map((th) => {
                   const pal = getThemePalette(th);
@@ -340,7 +340,7 @@ function BuildForLead({
                       onClick={() => patch({ theme: th })}
                       className={cn(
                         "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs capitalize",
-                        site.theme === th ? "border-accent text-white" : "border-white/10 text-white/55",
+                        site.theme === th ? "border-accent text-gray-900" : "border-gray-200 text-gray-600",
                       )}
                     >
                       <span className="h-3 w-3 rounded-full" style={{ background: pal.accent }} />
@@ -353,7 +353,7 @@ function BuildForLead({
 
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                <span className="mb-1 block text-[11px] font-medium text-white/50">
+                <span className="mb-1 block text-[11px] font-medium text-gray-400">
                   Quote price (₹)
                 </span>
                 <Input
@@ -366,11 +366,11 @@ function BuildForLead({
                 />
               </label>
               <label className="block">
-                <span className="mb-1 block text-[11px] font-medium text-white/50">Status</span>
+                <span className="mb-1 block text-[11px] font-medium text-gray-400">Status</span>
                 <select
                   value={site.status}
                   onChange={(e) => patch({ status: e.target.value as SiteStatus })}
-                  className="w-full rounded-xl border border-white/12 bg-ink-900 px-3 py-2 text-sm text-white"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
                 >
                   <option value="draft">Draft</option>
                   <option value="sent">Sent to client</option>
@@ -379,10 +379,10 @@ function BuildForLead({
               </label>
             </div>
 
-            <div className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-xs">
+            <div className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2 text-xs">
               <div>
-                <p className="text-white/50">Suggested invoice</p>
-                <p className="font-semibold text-white">{formatINR(site.quotePrice)}</p>
+                <p className="text-gray-400">Suggested invoice</p>
+                <p className="font-semibold text-gray-900">{formatINR(site.quotePrice)}</p>
               </div>
               <Button size="sm" variant="subtle" onClick={regenerate} disabled={regen}>
                 {regen ? <Spinner /> : <RefreshCw size={13} />} Regenerate copy
@@ -390,7 +390,7 @@ function BuildForLead({
             </div>
 
             <div>
-              <p className="mb-1.5 text-[11px] font-medium text-white/50">Photos</p>
+              <p className="mb-1.5 text-[11px] font-medium text-gray-400">Photos</p>
               <PhotoManager
                 photos={site.photosJson}
                 business={business}
@@ -402,7 +402,7 @@ function BuildForLead({
             </div>
 
             {site.status === "live" && (
-              <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
                 <Check size={14} className="shrink-0" />
                 <span className="truncate">{shareUrl}</span>
                 <button
@@ -410,7 +410,7 @@ function BuildForLead({
                     navigator.clipboard?.writeText(shareUrl);
                     push("Link copied", "success");
                   }}
-                  className="ml-auto shrink-0 rounded-full bg-emerald-500/20 p-1"
+                  className="ml-auto shrink-0 rounded-full bg-emerald-50 p-1"
                 >
                   <Copy size={12} />
                 </button>
@@ -419,7 +419,7 @@ function BuildForLead({
 
             <button
               onClick={() => openDetail(leadId)}
-              className="w-full rounded-xl border border-white/10 py-2 text-xs text-white/60 hover:text-white"
+              className="w-full rounded-xl border border-gray-200 py-2 text-xs text-gray-600 hover:text-gray-900"
             >
               Open lead details
             </button>
@@ -434,13 +434,13 @@ function BuildForLead({
               href={shareUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-white/60 hover:text-white"
+              className="text-xs text-gray-600 hover:text-gray-900"
             >
               {shareUrl}
             </a>
             <button
               onClick={() => setPreview(false)}
-              className="rounded-full bg-white/10 px-3 py-1.5 text-xs text-white"
+              className="rounded-full bg-gray-100 px-3 py-1.5 text-xs text-gray-900"
             >
               Close preview
             </button>

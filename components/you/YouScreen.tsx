@@ -95,7 +95,7 @@ export function YouScreen() {
 
   if (isLoading || !data) {
     return (
-      <div className="grid min-h-[100dvh] place-items-center text-white/40">
+      <div className="grid min-h-[100dvh] place-items-center text-gray-400">
         <Spinner className="h-6 w-6" />
       </div>
     );
@@ -105,8 +105,8 @@ export function YouScreen() {
     <div className="min-h-[100dvh] px-3 pb-28 pt-[max(14px,env(safe-area-inset-top))]">
       <div className="mx-auto max-w-lg space-y-5">
         <header>
-          <h1 className="text-xl font-semibold text-white">You</h1>
-          <p className="text-xs text-white/45">Keys, scoring, and app settings.</p>
+          <h1 className="text-xl font-semibold text-gray-900">You</h1>
+          <p className="text-xs text-gray-400">Keys, scoring, and app settings.</p>
         </header>
 
         {/* API keys */}
@@ -206,21 +206,21 @@ export function YouScreen() {
         <Section icon={Gauge} title="Places API usage this month">
           {quota ? (
             <>
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                 <div
                   className={`h-full ${quota.pct >= 90 ? "bg-red-400" : quota.pct >= 60 ? "bg-accent" : "bg-emerald-400"}`}
                   style={{ width: `${Math.min(100, quota.pct)}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-xs text-white/55">
+              <p className="mt-1.5 text-xs text-gray-600">
                 {quota.live
                   ? `${quota.used} / ~${quota.cap} free calls used`
                   : "Demo mode — no live calls yet"}
               </p>
-              <p className="text-[10px] text-white/30">{quota.note}</p>
+              <p className="text-[10px] text-gray-300">{quota.note}</p>
             </>
           ) : (
-            <p className="text-xs text-white/40">Loading…</p>
+            <p className="text-xs text-gray-400">Loading…</p>
           )}
         </Section>
 
@@ -228,14 +228,14 @@ export function YouScreen() {
         <Section icon={SlidersHorizontal} title="Scoring weights">
           {(Object.keys(WEIGHT_LABELS) as (keyof ScoringWeights)[]).map((k) => (
             <div key={k} className="flex items-center justify-between gap-3">
-              <span className="text-sm text-white/70">{WEIGHT_LABELS[k]}</span>
+              <span className="text-sm text-gray-600">{WEIGHT_LABELS[k]}</span>
               <input
                 type="number"
                 min={0}
                 max={100}
                 value={weights[k]}
                 onChange={(e) => setWeights((w) => ({ ...w, [k]: Number(e.target.value) }))}
-                className="w-16 rounded-lg border border-white/12 bg-ink-900 px-2 py-1 text-right text-sm text-white"
+                className="w-16 rounded-lg border border-gray-200 bg-white px-2 py-1 text-right text-sm text-gray-900"
               />
             </div>
           ))}
@@ -256,12 +256,12 @@ export function YouScreen() {
             {cats.map((c) => (
               <span
                 key={c}
-                className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-xs text-white/80"
+                className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-800"
               >
                 {humanizeType(c)}
                 <button
                   onClick={() => setCats((x) => x.filter((y) => y !== c))}
-                  className="text-white/40 hover:text-white"
+                  className="text-gray-400 hover:text-gray-900"
                 >
                   ×
                 </button>
@@ -290,7 +290,7 @@ export function YouScreen() {
               Save
             </Button>
           </div>
-          <p className="text-[10px] text-white/30">
+          <p className="text-[10px] text-gray-300">
             Use Google Places type IDs (snake_case). These also become the default scan filter.
           </p>
         </Section>
@@ -299,7 +299,7 @@ export function YouScreen() {
         <Section icon={IndianRupee} title="Default quote range">
           <div className="flex items-center gap-2">
             <Input type="number" value={qMin} onChange={(e) => setQMin(Number(e.target.value))} />
-            <span className="text-white/40">to</span>
+            <span className="text-gray-400">to</span>
             <Input type="number" value={qMax} onChange={(e) => setQMax(Number(e.target.value))} />
             <Button
               size="sm"
@@ -310,7 +310,7 @@ export function YouScreen() {
               Save
             </Button>
           </div>
-          <p className="text-[10px] text-white/30">
+          <p className="text-[10px] text-gray-300">
             New sites default to the midpoint. You invoice clients yourself — no payments here.
           </p>
         </Section>
@@ -353,7 +353,7 @@ export function YouScreen() {
           </Button>
         </Section>
 
-        <p className="pb-4 text-center text-[10px] text-white/25">Unbuilt · personal use</p>
+        <p className="pb-4 text-center text-[10px] text-gray-300">Unbuilt · personal use</p>
       </div>
     </div>
   );
@@ -370,7 +370,7 @@ function Section({
 }) {
   return (
     <section className="chrome space-y-3 rounded-2xl p-4">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
         <Icon size={15} className="text-accent" />
         {title}
       </h2>

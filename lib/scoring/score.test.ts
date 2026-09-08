@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { classifyWebsite, scoreBusiness, pinBucket } from "./score.ts";
+import { classifyWebsite, scoreBusiness, pinColor } from "./score.ts";
 import { DEFAULT_SCORING_WEIGHTS, DEFAULT_PRIORITY_CATEGORIES } from "../types.ts";
 
 const W = DEFAULT_SCORING_WEIGHTS;
@@ -81,10 +81,12 @@ test("scoreBusiness: score never exceeds 100 even with inflated weights", () => 
   assert.equal(r.score, 100);
 });
 
-test("pinBucket: won or live → green, else by score", () => {
-  assert.equal(pinBucket(95, "won", null), "green");
-  assert.equal(pinBucket(10, "not_contacted", "live"), "green");
-  assert.equal(pinBucket(72, "not_contacted", null), "pink");
-  assert.equal(pinBucket(50, "not_contacted", null), "amber");
-  assert.equal(pinBucket(20, "not_contacted", null), "green");
+test("pinColor: lead status wins, else website situation", () => {
+  assert.equal(pinColor("none", "lost"), "red");
+  assert.equal(pinColor("none", "won"), "purple");
+  assert.equal(pinColor("none", "quoted"), "blue");
+  assert.equal(pinColor("none", "not_contacted"), "orange");
+  assert.equal(pinColor("social", "not_contacted"), "pink");
+  assert.equal(pinColor("real", "not_contacted"), "green");
+  assert.equal(pinColor("unknown", "not_contacted"), "green");
 });

@@ -9,27 +9,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Accent: amber-on-dark. Used for active nav tab, high-score pins,
-        // primary buttons, score badges, top-bar icons.
+        // Accent: green-on-light. Active nav tab, primary buttons, score badges,
+        // locate button, top-bar icons.
         accent: {
-          DEFAULT: "#F5A623",
-          soft: "#FFC65C",
-          deep: "#C97F12",
-          glow: "rgba(245, 166, 35, 0.35)",
+          DEFAULT: "#12B76A",
+          soft: "#3CCB8A",
+          deep: "#0E9355",
+          wash: "#E7F7EF",
         },
+        canvas: "#F3F4F3", // page background behind the frosted chrome
         ink: {
-          // Dark base surfaces (map chrome, panels).
+          // Kept for the map's dark building extrusions only.
           950: "#0B0D10",
           900: "#12151A",
-          850: "#181C22",
-          800: "#1F242C",
-          700: "#2A313B",
-          600: "#3A424E",
         },
         pin: {
-          green: "#3FB65B", // saved / has-website / low priority
-          amber: "#F5A623", // active candidate lead
-          pink: "#EC4899", // top-scoring / flagged lead
+          orange: "#F79009", // no website — the opportunity
+          pink: "#F6699E", // social page only
+          green: "#12B76A", // already has a website
+          blue: "#2E90FA", // lead: talking / in progress
+          purple: "#8B5CF6", // lead: client
+          red: "#F04438", // lead: no-go
         },
       },
       fontFamily: {
@@ -45,16 +45,13 @@ const config: Config = {
         mono: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {
-        chrome: "0 8px 30px rgba(0, 0, 0, 0.35)",
-        pin: "0 0 0 4px rgba(245, 166, 35, 0.25)",
-      },
-      backdropBlur: {
-        chrome: "18px",
+        chrome: "0 6px 24px rgba(17, 24, 39, 0.12)",
+        card: "0 1px 3px rgba(17,24,39,0.08), 0 1px 2px rgba(17,24,39,0.06)",
       },
       keyframes: {
         "pin-pulse": {
-          "0%, 100%": { boxShadow: "0 0 0 0 rgba(245,166,35,0.45)" },
-          "50%": { boxShadow: "0 0 0 10px rgba(245,166,35,0)" },
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(18,183,106,0.45)" },
+          "50%": { boxShadow: "0 0 0 10px rgba(18,183,106,0)" },
         },
         "slide-up": {
           from: { transform: "translateY(12px)", opacity: "0" },

@@ -15,28 +15,26 @@ body {
 }
 
 body {
-  background: #0b0d10;
-  color: #e8eaed;
+  background: #f3f4f3;
+  color: #101828;
   font-family: var(--font-geist-sans);
   -webkit-font-smoothing: antialiased;
 }
 
-/* Frosted chrome surface used across the floating UI. */
+/* Frosted white chrome used across the floating UI. */
 .chrome {
-  background: rgba(17, 21, 27, 0.72);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(17, 24, 39, 0.06);
 }
 
-.chrome-light {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+/* Solid white card. */
+.card {
+  background: #ffffff;
+  border: 1px solid #eceef0;
 }
 
-/* Hide scrollbars on horizontal chip rows. */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -45,7 +43,7 @@ body {
   scrollbar-width: none;
 }
 
-/* Mapbox controls / attribution: keep them readable on the dark map. */
+/* Mapbox controls / attribution on the light map. */
 .mapboxgl-ctrl-attrib {
   font-size: 10px;
 }
@@ -57,7 +55,10 @@ body {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  color: #1f2937;
+  text-shadow:
+    0 1px 2px rgba(255, 255, 255, 0.95),
+    0 0 2px rgba(255, 255, 255, 0.95);
   white-space: nowrap;
   pointer-events: none;
 }

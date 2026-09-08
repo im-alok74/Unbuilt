@@ -10,7 +10,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <AppProvider>
       <ToastProvider>
-        <div className="relative min-h-[100dvh] bg-ink-950">
+        <div className="relative min-h-[100dvh] bg-canvas">
           {children}
           <BottomNav />
           <DetailPanel />

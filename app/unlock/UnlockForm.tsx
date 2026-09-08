@@ -50,14 +50,14 @@ export function UnlockForm() {
   }
 
   return (
-    <div className="grid min-h-[100dvh] place-items-center bg-ink-950 px-6">
+    <div className="grid min-h-[100dvh] place-items-center bg-white px-6">
       <div className="w-full max-w-xs">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-accent/15 text-accent">
+          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-accent-wash text-accent">
             <Lock size={20} />
           </div>
-          <h1 className="text-lg font-semibold text-white">Unbuilt</h1>
-          <p className="text-xs text-white/45">
+          <h1 className="text-lg font-semibold text-gray-900">Unbuilt</h1>
+          <p className="text-xs text-gray-400">
             {configured === false ? "Set a PIN to protect this app" : "Enter your PIN"}
           </p>
         </div>
@@ -69,7 +69,7 @@ export function UnlockForm() {
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 8))}
             placeholder="PIN"
-            className="w-full rounded-xl border border-white/12 bg-ink-900 px-4 py-3 text-center text-lg tracking-[0.4em] text-white placeholder:tracking-normal placeholder:text-white/30 focus:border-accent focus:outline-none"
+            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-lg tracking-[0.4em] text-gray-900 placeholder:tracking-normal placeholder:text-gray-400 focus:border-accent focus:outline-none"
           />
           {configured === false && (
             <input
@@ -77,14 +77,14 @@ export function UnlockForm() {
               value={confirm}
               onChange={(e) => setConfirm(e.target.value.replace(/\D/g, "").slice(0, 8))}
               placeholder="Confirm PIN"
-              className="w-full rounded-xl border border-white/12 bg-ink-900 px-4 py-3 text-center text-lg tracking-[0.4em] text-white placeholder:tracking-normal placeholder:text-white/30 focus:border-accent focus:outline-none"
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-center text-lg tracking-[0.4em] text-gray-900 placeholder:tracking-normal placeholder:text-gray-400 focus:border-accent focus:outline-none"
             />
           )}
-          {err && <p className="text-center text-xs text-red-400">{err}</p>}
+          {err && <p className="text-center text-xs text-red-600">{err}</p>}
           <button
             type="submit"
             disabled={busy || pin.length < 4}
-            className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-ink-950 disabled:opacity-50"
+            className="w-full rounded-xl bg-accent py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
             {busy ? "…" : configured === false ? "Set PIN & enter" : "Unlock"}
           </button>

@@ -41,14 +41,14 @@ export function FilterSheet({
       />
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-[96] max-h-[80vh] overflow-y-auto rounded-t-3xl bg-ink-950 p-5 pb-28 shadow-chrome transition-transform duration-200",
+          "fixed inset-x-0 bottom-0 z-[96] max-h-[80vh] overflow-y-auto rounded-t-3xl bg-white p-5 pb-28 shadow-chrome transition-transform duration-200",
           open ? "translate-y-0" : "translate-y-full",
         )}
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-white/15" />
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300" />
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-white">Filters</h3>
-          <button onClick={onClose} className="rounded-full p-1.5 text-white/60 hover:bg-white/10">
+          <h3 className="text-base font-semibold text-gray-900">Filters</h3>
+          <button onClick={onClose} className="rounded-full p-1.5 text-gray-600 hover:bg-gray-100">
             <X size={18} />
           </button>
         </div>
@@ -56,7 +56,7 @@ export function FilterSheet({
         <div className="space-y-5">
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <span className="text-xs font-medium text-white/70">Minimum score</span>
+              <span className="text-xs font-medium text-gray-600">Minimum score</span>
               <span className="text-xs tabular-nums text-accent">{filters.minScore}%</span>
             </div>
             <input
@@ -72,8 +72,8 @@ export function FilterSheet({
             />
           </div>
 
-          <label className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2.5">
-            <span className="text-sm text-white/80">No website only</span>
+          <label className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5">
+            <span className="text-sm text-gray-800">No website only</span>
             <input
               type="checkbox"
               checked={filters.noWebsiteOnly}
@@ -85,7 +85,7 @@ export function FilterSheet({
           </label>
 
           <div>
-            <span className="mb-2 block text-xs font-medium text-white/70">Lead status</span>
+            <span className="mb-2 block text-xs font-medium text-gray-600">Lead status</span>
             <div className="flex flex-wrap gap-2">
               {STATUSES.map((s) => {
                 const on = filters.status.includes(s);
@@ -102,7 +102,7 @@ export function FilterSheet({
                     }
                     className={cn(
                       "rounded-full px-3 py-1.5 text-xs font-medium",
-                      on ? "bg-accent text-ink-950" : "bg-white/8 text-white/70",
+                      on ? "bg-accent text-white" : "bg-gray-100 text-gray-600",
                     )}
                   >
                     {LEAD_STATUS_LABELS[s]}
@@ -114,7 +114,7 @@ export function FilterSheet({
 
           {categoryOptions.length > 0 && (
             <div>
-              <span className="mb-2 block text-xs font-medium text-white/70">Categories</span>
+              <span className="mb-2 block text-xs font-medium text-gray-600">Categories</span>
               <div className="flex flex-wrap gap-2">
                 {categoryOptions.map((c) => {
                   const on = filters.categories.includes(c);
@@ -131,7 +131,7 @@ export function FilterSheet({
                       }
                       className={cn(
                         "rounded-full px-3 py-1.5 text-xs font-medium",
-                        on ? "bg-accent text-ink-950" : "bg-white/8 text-white/70",
+                        on ? "bg-accent text-white" : "bg-gray-100 text-gray-600",
                       )}
                     >
                       {humanizeType(c)}

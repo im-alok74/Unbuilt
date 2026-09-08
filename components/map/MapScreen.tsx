@@ -9,13 +9,15 @@ import { FallbackMap } from "@/components/map/FallbackMap";
 import { TopBar } from "@/components/map/TopBar";
 import { FilterSheet } from "@/components/FilterSheet";
 import { ScanControls } from "@/components/map/ScanControls";
+import { MapKey, useMapKey } from "@/components/map/MapKey";
 
 export function MapScreen() {
   const { config } = useConfig();
-  const { filters, drop, radiusM, setDrop, mapMode, openDetail, lastScanAt } = useApp();
+  const { filters, drop, radiusM, setDrop, openDetail, lastScanAt } = useApp();
   const { push } = useToast();
   const query = filtersToQuery(filters);
   const { businesses, refresh } = useBusinesses(query);
+  const mapKey = useMapKey();
 
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [recenter, setRecenter] = React.useState(0);
@@ -33,9 +35,7 @@ export function MapScreen() {
   );
 
   function locate() {
-    if (drop) {
-      setRecenter((n) => n + 1);
-    }
+    if (drop) setRecenter((n) => n + 1);
     if (!navigator.geolocation) {
       push("Geolocation not available", "error");
       return;
@@ -96,7 +96,6 @@ export function MapScreen() {
           businesses={businesses}
           drop={drop}
           radiusM={radiusM}
-          mode={mapMode}
           onDrop={(p) => setDrop(p)}
           onPick={openDetail}
           recenterSignal={recenter}
@@ -107,7 +106,6 @@ export function MapScreen() {
           businesses={businesses}
           drop={drop}
           radiusM={radiusM}
-          mode={mapMode}
           onDrop={(p) => setDrop(p)}
           onPick={openDetail}
           recenterSignal={recenter}
@@ -119,10 +117,12 @@ export function MapScreen() {
         onOpenFilter={() => setFilterOpen(true)}
         onRecenter={locate}
         onSearch={onSearch}
-        mapboxToken={config?.mapboxToken ?? null}
+        onToggleKey={mapKey.toggle}
       />
 
-      <ScanControls mode={mapMode} onScanned={refresh} />
+      <MapKey open={mapKey.open} onClose={mapKey.close} />
+
+      <ScanControls onScanned={refresh} />
 
       <FilterSheet
         open={filterOpen}

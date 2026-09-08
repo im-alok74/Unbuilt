@@ -51,8 +51,8 @@ export function LeadsScreen() {
       <div className="mx-auto max-w-5xl">
         <header className="mb-3 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-white">Leads</h1>
-            <p className="text-xs text-white/45">
+            <h1 className="text-xl font-semibold text-gray-900">Sites</h1>
+            <p className="text-xs text-gray-400">
               {businesses.length} {businesses.length === 1 ? "business" : "businesses"}
               {nFilters > 0 && " · filtered"}
             </p>
@@ -64,7 +64,7 @@ export function LeadsScreen() {
             >
               <SlidersHorizontal size={16} />
               {nFilters > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-ink-950">
+                <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">
                   {nFilters}
                 </span>
               )}
@@ -79,12 +79,12 @@ export function LeadsScreen() {
         </header>
 
         <div className="chrome mb-3 flex h-11 items-center rounded-full px-4">
-          <Search size={16} className="mr-2 text-white/40" />
+          <Search size={16} className="mr-2 text-gray-400" />
           <input
             value={filters.search}
             onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
             placeholder="Search leads by name"
-            className="w-full bg-transparent text-sm text-white placeholder:text-white/40 focus:outline-none"
+            className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
           />
         </div>
 
@@ -97,8 +97,8 @@ export function LeadsScreen() {
               className={cn(
                 "inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium",
                 filters.sort === c.key
-                  ? "bg-accent text-ink-950"
-                  : "bg-white/8 text-white/60",
+                  ? "bg-accent text-white"
+                  : "bg-gray-100 text-gray-600",
               )}
             >
               {c.label}
@@ -110,20 +110,20 @@ export function LeadsScreen() {
         </div>
 
         {isLoading && businesses.length === 0 ? (
-          <p className="py-16 text-center text-sm text-white/40">Loading…</p>
+          <p className="py-16 text-center text-sm text-gray-400">Loading…</p>
         ) : businesses.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 py-16 text-center">
-            <p className="text-sm text-white/50">No leads yet.</p>
-            <p className="mt-1 text-xs text-white/35">
+          <div className="rounded-2xl border border-dashed border-gray-200 py-16 text-center">
+            <p className="text-sm text-gray-400">No leads yet.</p>
+            <p className="mt-1 text-xs text-gray-300">
               Go to the map, drop a pin, and run a scan.
             </p>
           </div>
         ) : (
           <>
             {/* desktop table */}
-            <div className="hidden overflow-hidden rounded-2xl border border-white/8 md:block">
+            <div className="hidden overflow-hidden rounded-2xl border border-gray-200 md:block">
               <table className="w-full text-sm">
-                <thead className="bg-white/5 text-left text-xs text-white/50">
+                <thead className="bg-gray-50 text-left text-xs text-gray-400">
                   <tr>
                     <th className="px-4 py-2.5 font-medium">Business</th>
                     <th className="px-3 py-2.5 font-medium">Score</th>
@@ -140,12 +140,12 @@ export function LeadsScreen() {
                   {businesses.map((b) => (
                     <tr
                       key={b.id}
-                      className="cursor-pointer border-t border-white/5 hover:bg-white/[0.03]"
+                      className="cursor-pointer border-t border-gray-100 hover:bg-gray-50"
                       onClick={() => openDetail(b.id)}
                     >
                       <td className="px-4 py-2.5">
-                        <div className="font-medium text-white">{b.name}</div>
-                        <div className="text-xs text-white/40">
+                        <div className="font-medium text-gray-900">{b.name}</div>
+                        <div className="text-xs text-gray-400">
                           {b.categoryLabel ?? b.category}
                         </div>
                       </td>
@@ -161,20 +161,20 @@ export function LeadsScreen() {
                           <Badge tone="pink">No</Badge>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 tabular-nums text-white/70">
+                      <td className="px-3 py-2.5 tabular-nums text-gray-600">
                         {b.rating?.toFixed(1) ?? "—"}
                       </td>
-                      <td className="px-3 py-2.5 tabular-nums text-white/70">{b.reviewCount}</td>
+                      <td className="px-3 py-2.5 tabular-nums text-gray-600">{b.reviewCount}</td>
                       <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                         <StatusControl businessId={b.id} value={b.leadStatus} compact />
                       </td>
-                      <td className="px-3 py-2.5 text-xs text-white/60">
+                      <td className="px-3 py-2.5 text-xs text-gray-600">
                         {b.siteStatus ? SITE_STATUS_LABELS[b.siteStatus] : "—"}
                       </td>
-                      <td className="px-3 py-2.5 tabular-nums text-white/70">
+                      <td className="px-3 py-2.5 tabular-nums text-gray-600">
                         {b.quotePrice ? formatINR(b.quotePrice) : "—"}
                       </td>
-                      <td className="px-3 py-2.5 text-white/30">
+                      <td className="px-3 py-2.5 text-gray-300">
                         <ExternalLink size={14} />
                       </td>
                     </tr>
@@ -193,10 +193,10 @@ export function LeadsScreen() {
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate font-medium text-white">{b.name}</span>
+                      <span className="truncate font-medium text-gray-900">{b.name}</span>
                       <ScoreBadge score={b.score} />
                     </div>
-                    <div className="mt-0.5 flex items-center gap-2 text-xs text-white/45">
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-400">
                       <span>{b.categoryLabel ?? b.category}</span>
                       {b.rating != null && <span>· {b.rating.toFixed(1)}★ ({b.reviewCount})</span>}
                     </div>

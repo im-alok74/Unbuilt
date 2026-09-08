@@ -40,27 +40,27 @@ export function PhotoManager({
     <div className="space-y-3">
       <div className="grid grid-cols-3 gap-2">
         {photos.map((p, i) => (
-          <div key={p.url} className="group relative overflow-hidden rounded-lg border border-white/10">
+          <div key={p.url} className="group relative overflow-hidden rounded-lg border border-gray-200">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={p.url} alt="" className="h-20 w-full object-cover" />
             <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition group-hover:opacity-100">
               <button
                 onClick={() => makeHero(i)}
-                className={cn("rounded-full p-1.5", i === 0 ? "bg-accent text-ink-950" : "bg-white/20 text-white")}
+                className={cn("rounded-full p-1.5", i === 0 ? "bg-accent text-white" : "bg-white/25 text-white")}
                 title="Use as main photo"
               >
                 <Star size={13} />
               </button>
               <button
                 onClick={() => remove(i)}
-                className="rounded-full bg-white/20 p-1.5 text-white"
+                className="rounded-full bg-white/25 p-1.5 text-white"
                 title="Remove"
               >
                 <Trash2 size={13} />
               </button>
             </div>
             {i === 0 && (
-              <span className="absolute left-1 top-1 rounded bg-accent px-1 text-[9px] font-bold text-ink-950">
+              <span className="absolute left-1 top-1 rounded bg-accent px-1 text-[9px] font-bold text-white">
                 MAIN
               </span>
             )}
@@ -70,17 +70,17 @@ export function PhotoManager({
 
       {available.length > 0 && (
         <div>
-          <p className="mb-1.5 text-[11px] font-medium text-white/50">From the Google listing</p>
+          <p className="mb-1.5 text-[11px] font-medium text-gray-400">From the Google listing</p>
           <div className="no-scrollbar flex gap-2 overflow-x-auto">
             {available.slice(0, 12).map((u) => (
               <button
                 key={u}
                 onClick={() => onChange([...photos, { url: u, alt: business?.name ?? "", source: "places" }])}
-                className="relative shrink-0 overflow-hidden rounded-lg border border-white/10"
+                className="relative shrink-0 overflow-hidden rounded-lg border border-gray-200"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={u} alt="" className="h-16 w-24 object-cover" />
-                <span className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white">
+                <span className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-gray-900">
                   <Plus size={11} />
                 </span>
               </button>
@@ -100,7 +100,7 @@ export function PhotoManager({
           Add
         </Button>
       </div>
-      <p className="text-[10px] text-white/30">
+      <p className="text-[10px] text-gray-300">
         Direct file upload needs blob storage — add via URL for now, or pick from the Google listing.
       </p>
     </div>
