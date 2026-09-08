@@ -29,21 +29,22 @@ Test data was cleaned out — the database is empty and ready.
 
 ## ⏳ One step left: deploy
 
-```powershell
-cd "A:\All projects\unbuilt"
-npx vercel login            # opens a browser — 30 seconds
-.\scripts\deploy.ps1        # links project "unbuilt", pushes env vars from .env.local, deploys
-```
+Code is pushed to **https://github.com/im-alok74/Unbuilt** (`main`).
 
-(`scripts/deploy.sh` is the bash equivalent.)
+**Fastest path — import on Vercel (no CLI):**
 
-The script reads `.env.local` — which already contains the working `DATABASE_URL`,
-`ENCRYPTION_KEY`, `AUTH_SECRET`, and `APP_PIN` — and sets them on the Vercel
-project before deploying. Nothing to copy by hand.
+1. https://vercel.com/new → import **im-alok74/Unbuilt**
+2. Expand **Environment Variables** and add these four (values are in `.env.local`):
+   - `DATABASE_URL`
+   - `ENCRYPTION_KEY`
+   - `AUTH_SECRET`
+   - `APP_PIN` = `246810`
+3. Framework auto-detects as Next.js. Click **Deploy**.
 
-If you'd rather do it in the Vercel dashboard: create a project from this folder,
-then add the four vars from `.env.local` under Settings → Environment Variables,
-and redeploy.
+Every future `git push` to `main` then auto-deploys.
+
+**Alternative — CLI:** `npx vercel login` then `.\scripts\deploy.ps1`
+(`scripts/deploy.sh` on bash) — reads `.env.local`, pushes the env vars, deploys.
 
 ---
 
