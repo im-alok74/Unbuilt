@@ -1,8 +1,18 @@
 # Unbuilt — build status
 
-Built overnight while you were asleep. **Everything is done except the final
-Vercel deploy, which needs you to log in once** (Vercel CLI has no non-interactive
-login and the Vercel connector can't set env vars). ~3 minutes in the morning.
+## 🟢 LIVE — https://unbuilt-azure.vercel.app
+
+Deployed, git-linked (every push to `main` auto-deploys), and verified end-to-end
+in production: PIN unlock, live Google Places scan, Gemini site copy, Mapbox 3D map.
+Unlock PIN is `246810` until you set your own in the You tab.
+
+Design: light theme + green accent, MAP KEY legend, 4-tab nav (Drop / Build / Sites / You).
+
+Still outstanding:
+- Give me the real **Places free-tier quota number** (Google Cloud → Places API (New)
+  → Quotas) so the You-tab usage meter shows the true cap (placeholder is 1000).
+- Optional: the GitHub repo is **public** — make it private if you'd rather (no
+  secrets are committed either way).
 
 ---
 
