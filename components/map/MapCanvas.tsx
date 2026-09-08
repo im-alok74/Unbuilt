@@ -272,5 +272,11 @@ export function MapCanvas({
     })();
   }, [businesses, ready]);
 
-  return <div ref={containerRef} className="absolute inset-0" />;
+  // Outer wrapper keeps the sizing: mapbox-gl.css forces `position: relative` on
+  // the container element it's given, which would collapse `absolute inset-0`.
+  return (
+    <div className="absolute inset-0">
+      <div ref={containerRef} className="h-full w-full" />
+    </div>
+  );
 }
