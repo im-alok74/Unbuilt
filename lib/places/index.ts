@@ -11,6 +11,15 @@ import { mockSearch } from "./mock";
 
 export { planTiles, estimateScan } from "./tiles";
 
+// Valid Place types that Nearby Search (New) rejects as an `includedType` filter,
+// even though they appear as `primaryType` on results. Kept out of the API call
+// but still usable for scoring.
+const NOT_SEARCHABLE = new Set([
+  "general_contractor",
+  "point_of_interest",
+  "establishment",
+]);
+
 export interface ScanArgs {
   lat: number;
   lng: number;
@@ -30,11 +39,13 @@ export interface ScanOutcome {
 export async function runScan(args: ScanArgs): Promise<ScanOutcome> {
   const cfg = await getConfig();
   const tiles = planTiles({ lat: args.lat, lng: args.lng }, args.radiusM);
-  const includedTypes = args.allBusinesses
-    ? undefined
-    : args.includedTypes && args.includedTypes.length
+  const rawTypes =
+    args.includedTypes && args.includedTypes.length
       ? args.includedTypes
       : cfg.priorityCategories;
+  const includedTypes = args.allBusinesses
+    ? undefined
+    : rawTypes.filter((t) => !NOT_SEARCHABLE.has(t));
 
   const mock = !cfg.hasPlacesKey;
   const collected = new Map<string, NormalizedBusiness>();

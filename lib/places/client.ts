@@ -83,11 +83,11 @@ function normalize(p: RawPlace, apiKey: string): NormalizedBusiness {
   };
 }
 
-export async function searchTile(
+async function callSearchNearby(
   tile: Tile,
   apiKey: string,
-  includedTypes?: string[],
-): Promise<NormalizedBusiness[]> {
+  includedTypes: string[] | undefined,
+): Promise<{ ok: true; places: RawPlace[] } | { ok: false; status: number; body: string }> {
   const body: Record<string, unknown> = {
     maxResultCount: 20,
     rankPreference: "POPULARITY",
@@ -99,8 +99,7 @@ export async function searchTile(
     },
   };
   if (includedTypes && includedTypes.length > 0) {
-    // Nearby Search (New) allows up to 50 included types.
-    body.includedTypes = includedTypes.slice(0, 50);
+    body.includedTypes = includedTypes.slice(0, 50); // API allows up to 50
   }
 
   const res = await fetch(ENDPOINT, {
@@ -115,10 +114,41 @@ export async function searchTile(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Places searchNearby ${res.status}: ${text.slice(0, 300)}`);
+    return { ok: false, status: res.status, body: await res.text().catch(() => "") };
+  }
+  const json = (await res.json()) as { places?: RawPlace[] };
+  return { ok: true, places: json.places ?? [] };
+}
+
+export async function searchTile(
+  tile: Tile,
+  apiKey: string,
+  includedTypes?: string[],
+): Promise<NormalizedBusiness[]> {
+  let types = includedTypes;
+  let res = await callSearchNearby(tile, apiKey, types);
+
+  // Google rejects the whole request if any includedType isn't a valid Nearby
+  // Search type (e.g. "general_contractor"). Strip the offenders and retry.
+  if (
+    !res.ok &&
+    res.status === 400 &&
+    /Unsupported types?:/i.test(res.body) &&
+    types &&
+    types.length
+  ) {
+    const bad = new Set(
+      (res.body.match(/Unsupported types?:\s*([^"}\n]+)/i)?.[1] ?? "")
+        .split(",")
+        .map((s) => s.trim().replace(/\.$/, ""))
+        .filter(Boolean),
+    );
+    types = types.filter((t) => !bad.has(t));
+    res = await callSearchNearby(tile, apiKey, types.length ? types : undefined);
   }
 
-  const json = (await res.json()) as { places?: RawPlace[] };
-  return (json.places ?? []).map((p) => normalize(p, apiKey));
+  if (!res.ok) {
+    throw new Error(`Places searchNearby ${res.status}: ${res.body.slice(0, 300)}`);
+  }
+  return res.places.map((p) => normalize(p, apiKey));
 }

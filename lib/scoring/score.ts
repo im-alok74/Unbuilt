@@ -25,6 +25,15 @@ const SOCIAL_HOSTS = [
   "justdial.com",
   "zomato.com",
   "swiggy.com",
+  // Indian ordering / storefront builders — not a real website
+  "dotpe.in",
+  "petpooja.com",
+  "mydukaan.io",
+  "instamojo.com",
+  "myinstamojo.com",
+  "pages.razorpay.com",
+  "bit.ly",
+  "linktw.in",
 ];
 
 /**
