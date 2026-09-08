@@ -48,21 +48,30 @@ Every future `git push` to `main` then auto-deploys.
 
 ---
 
-## ☀️ Morning checklist (in the app, after deploy)
+## Keys — already wired in
 
-Open the deployed URL → unlock with **246810** → go to the **You** tab:
+Your Places key, Gemini key, and Mapbox token are stored in the Neon `settings`
+row (Places + Gemini AES-256-GCM encrypted). They're also in `.env.local` for
+local dev. So once the 4 deploy env vars are set, the app is **fully live** — real
+scans, real AI copy, real 3D map. No demo mode.
+
+Verified working end-to-end against the live APIs:
+- Places (New) Nearby Search — real Mumbai businesses, correct scores
+- Gemini — real per-business copy (`gemini-flash-lite-latest`, auto-upgrades to
+  `gemini-flash-latest` when it's not overloaded)
+- Mapbox — 3D map renders with your Default public token
+
+## ☀️ First-run checklist (in the app, after deploy)
+
+Open the URL → unlock with **246810** → **You** tab:
 
 1. **Set your own PIN** (App lock → Change PIN). Once set, `246810` stops working.
-2. **Priority categories** — I seeded restaurants, cafes, salons, gyms, contractors,
-   dentists, doctors, etc. (19 Google Places types). Edit to taste.
-3. **Google Places API (New) key** — paste it in. Until then every scan uses demo
-   data. (Setup steps are in our earlier chat / `README.md` doesn't repeat them.)
-4. **Mapbox public token** (`pk.…`) — paste it in for the real tilted 3D map.
-   Without it the map is a working schematic grid.
-5. **Gemini API key** (optional) — for AI-written site copy. Without it the Build
-   tab uses solid hand-written fallback copy per business type.
-
-Everything is editable later; nothing is required to start clicking around.
+2. **Priority categories** — I seeded 19 Google Places types (restaurants, cafes,
+   salons, gyms, dentists, doctors, trades…). Edit to taste. Note: `general_contractor`
+   stays in the list for *scoring* but is auto-skipped in the scan filter (Google's
+   Nearby Search doesn't accept it as a search type).
+3. Give me the real **Places free-tier quota number** (Google Cloud → Places API
+   (New) → Quotas) so I can fix the You-tab meter (placeholder is `1000`).
 
 ---
 
