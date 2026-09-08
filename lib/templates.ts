@@ -1,59 +1,121 @@
 import type { TemplateMeta } from "@/lib/types";
 
-export const TEMPLATES: TemplateMeta[] = [
+export type SectionId =
+  | "hero"
+  | "highlights"
+  | "services"
+  | "about"
+  | "gallery"
+  | "hours"
+  | "contact";
+
+export type HeroStyle = "image" | "split" | "gradient" | "minimal" | "card";
+export type CardStyle = "soft" | "bordered" | "flat" | "elevated";
+export type FontKey = "sans" | "serif" | "grotesk" | "rounded";
+
+export interface TemplateConfig extends TemplateMeta {
+  hero: HeroStyle;
+  cards: CardStyle;
+  font: FontKey;
+  radius: number;
+  uppercaseEyebrow: boolean;
+  sections: SectionId[];
+}
+
+export const TEMPLATES: TemplateConfig[] = [
   {
-    id: "warm-hospitality",
-    name: "Warm Hospitality",
-    blurb: "Cosy, food-forward. Big hero photo, menu-style service list. Great for restaurants & cafes.",
-    themes: ["amber", "terracotta", "forest"],
-    defaultTheme: "amber",
-    accentSwatch: "#F5A623",
+    id: "hearth",
+    name: "Hearth",
+    blurb: "Warm and appetising. Full-bleed hero photo, serif headings. Restaurants, cafes, bakeries.",
+    hero: "image",
+    cards: "soft",
+    font: "serif",
+    radius: 18,
+    uppercaseEyebrow: true,
+    sections: ["hero", "highlights", "about", "services", "gallery", "hours", "contact"],
+    themes: ["ember", "olive", "plum"],
+    defaultTheme: "ember",
+    accentSwatch: "#C2410C",
   },
   {
-    id: "clean-services",
-    name: "Clean Services",
-    blurb: "Crisp and trustworthy. Service cards up front. Contractors, plumbers, electricians.",
-    themes: ["blue", "slate", "green"],
-    defaultTheme: "blue",
-    accentSwatch: "#2563EB",
+    id: "ledger",
+    name: "Ledger",
+    blurb: "Clean and trustworthy. Services up front, calm palette. Clinics, contractors, trades, offices.",
+    hero: "split",
+    cards: "bordered",
+    font: "sans",
+    radius: 12,
+    uppercaseEyebrow: true,
+    sections: ["hero", "services", "highlights", "about", "hours", "gallery", "contact"],
+    themes: ["slate", "teal", "royal"],
+    defaultTheme: "slate",
+    accentSwatch: "#1E3A8A",
   },
   {
-    id: "studio-minimal",
-    name: "Studio Minimal",
-    blurb: "Lots of whitespace, editorial type. Salons, spas, boutiques.",
-    themes: ["ink", "blush", "sand"],
-    defaultTheme: "blush",
-    accentSwatch: "#EC4899",
+    id: "aurora",
+    name: "Aurora",
+    blurb: "Modern and friendly. Soft gradient hero, rounded cards. Salons, spas, studios, modern services.",
+    hero: "gradient",
+    cards: "elevated",
+    font: "rounded",
+    radius: 24,
+    uppercaseEyebrow: false,
+    sections: ["hero", "highlights", "services", "gallery", "about", "hours", "contact"],
+    themes: ["blossom", "mint", "sky"],
+    defaultTheme: "blossom",
+    accentSwatch: "#DB2777",
   },
   {
-    id: "bold-fitness",
-    name: "Bold Fitness",
-    blurb: "High-contrast, punchy. Gyms, trainers, studios.",
-    themes: ["lime", "orange", "cyan"],
-    defaultTheme: "lime",
-    accentSwatch: "#84CC16",
+    id: "forge",
+    name: "Forge",
+    blurb: "Bold and high-energy. Dark sections, big type. Gyms, garages, barbers, anything punchy.",
+    hero: "image",
+    cards: "flat",
+    font: "grotesk",
+    radius: 6,
+    uppercaseEyebrow: true,
+    sections: ["hero", "highlights", "services", "about", "gallery", "hours", "contact"],
+    themes: ["volt", "crimson", "ice"],
+    defaultTheme: "volt",
+    accentSwatch: "#65A30D",
   },
   {
-    id: "trusted-clinic",
-    name: "Trusted Clinic",
-    blurb: "Calm and reassuring. Hours & contact prominent. Dentists, doctors, vets.",
-    themes: ["teal", "blue", "green"],
-    defaultTheme: "teal",
-    accentSwatch: "#0D9488",
+    id: "atelier",
+    name: "Atelier",
+    blurb: "Minimal and editorial. Lots of whitespace, restrained type. Boutiques, design-led salons.",
+    hero: "minimal",
+    cards: "flat",
+    font: "serif",
+    radius: 4,
+    uppercaseEyebrow: true,
+    sections: ["hero", "about", "services", "gallery", "highlights", "hours", "contact"],
+    themes: ["ink", "sand", "sage"],
+    defaultTheme: "sand",
+    accentSwatch: "#1C1917",
   },
   {
-    id: "classic-card",
-    name: "Classic Card",
-    blurb: "Single-column, one-screen business card. Works for anything.",
-    themes: ["ink", "amber", "navy"],
+    id: "card",
+    name: "Card",
+    blurb: "One screen, no scrolling on desktop. A digital business card. Works for anything.",
+    hero: "card",
+    cards: "soft",
+    font: "sans",
+    radius: 22,
+    uppercaseEyebrow: false,
+    sections: ["hero", "services", "hours", "contact"],
+    themes: ["navy", "forest", "grape"],
     defaultTheme: "navy",
-    accentSwatch: "#1E293B",
+    accentSwatch: "#0F172A",
   },
 ];
 
-export function getTemplateMeta(id: string): TemplateMeta {
+export function getTemplate(id: string): TemplateConfig {
   return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
 }
+// Back-compat alias used elsewhere.
+export const getTemplateMeta = getTemplate;
+
+// ─── Themes ────────────────────────────────────────────────────────────────────
 
 export interface ThemePalette {
   bg: string;
@@ -63,25 +125,57 @@ export interface ThemePalette {
   accent: string;
   accentText: string;
   border: string;
+  /** Dark band used by some templates for headers/footers/CTA strips. */
+  band: string;
+  bandText: string;
 }
 
 export const THEMES: Record<string, ThemePalette> = {
-  amber: { bg: "#FFFBF3", surface: "#FFF3DF", text: "#2A1E0C", muted: "#7A6543", accent: "#F5A623", accentText: "#2A1E0C", border: "#F0DEBE" },
-  terracotta: { bg: "#FFF6F2", surface: "#FCE7DE", text: "#3A1E14", muted: "#8A5A48", accent: "#D2683F", accentText: "#FFFFFF", border: "#F3D8CC" },
-  forest: { bg: "#F5F8F4", surface: "#E1EDE1", text: "#16241A", muted: "#4E6B54", accent: "#2F7D46", accentText: "#FFFFFF", border: "#D2E3D3" },
-  blue: { bg: "#F7F9FF", surface: "#E8F0FE", text: "#101828", muted: "#516079", accent: "#2563EB", accentText: "#FFFFFF", border: "#D6E2F7" },
-  slate: { bg: "#F8FAFC", surface: "#EEF2F6", text: "#0F172A", muted: "#55627A", accent: "#475569", accentText: "#FFFFFF", border: "#E2E8F0" },
-  green: { bg: "#F5FBF6", surface: "#E4F4E7", text: "#0F2417", muted: "#4C6B55", accent: "#16A34A", accentText: "#FFFFFF", border: "#D3EAD8" },
-  ink: { bg: "#FCFCFD", surface: "#F3F4F6", text: "#0A0A0A", muted: "#6B7280", accent: "#111827", accentText: "#FFFFFF", border: "#E5E7EB" },
-  blush: { bg: "#FFF8FA", surface: "#FCE7EF", text: "#2A0F1B", muted: "#8A5B6E", accent: "#EC4899", accentText: "#FFFFFF", border: "#F5D6E2" },
-  sand: { bg: "#FBF9F4", surface: "#F0EADD", text: "#26210F", muted: "#726A52", accent: "#B08442", accentText: "#FFFFFF", border: "#E6DEC9" },
-  lime: { bg: "#0B0F0A", surface: "#17210F", text: "#F3FFE6", muted: "#9CB080", accent: "#84CC16", accentText: "#0B0F0A", border: "#28351A" },
-  orange: { bg: "#100A06", surface: "#241408", text: "#FFF1E6", muted: "#B08C72", accent: "#F97316", accentText: "#100A06", border: "#3A2213" },
-  cyan: { bg: "#07141A", surface: "#0E2630", text: "#E6FBFF", muted: "#7FA9B4", accent: "#06B6D4", accentText: "#07141A", border: "#153A46" },
-  teal: { bg: "#F4FBFA", surface: "#DCF0EC", text: "#0C2420", muted: "#487068", accent: "#0D9488", accentText: "#FFFFFF", border: "#CDE7E1" },
-  navy: { bg: "#F7F8FA", surface: "#E9ECF2", text: "#0B1220", muted: "#4E5A70", accent: "#1E293B", accentText: "#FFFFFF", border: "#DCE1EA" },
+  ember: { bg: "#FFFBF7", surface: "#FBEEE3", text: "#2B1810", muted: "#7C5A48", accent: "#C2410C", accentText: "#FFFFFF", border: "#F1DECF", band: "#2B1810", bandText: "#FBEEE3" },
+  olive: { bg: "#FBFBF6", surface: "#ECEEDF", text: "#22260F", muted: "#5F6B45", accent: "#4D7C0F", accentText: "#FFFFFF", border: "#DEE2CB", band: "#22260F", bandText: "#ECEEDF" },
+  plum: { bg: "#FDFBFD", surface: "#F3E8F1", text: "#2A1424", muted: "#7A5570", accent: "#9D174D", accentText: "#FFFFFF", border: "#EAD7E6", band: "#2A1424", bandText: "#F3E8F1" },
+  slate: { bg: "#FBFCFD", surface: "#EEF2F6", text: "#0F172A", muted: "#556378", accent: "#1E3A8A", accentText: "#FFFFFF", border: "#E1E7EE", band: "#0F172A", bandText: "#EEF2F6" },
+  teal: { bg: "#F7FCFB", surface: "#DEF1EE", text: "#0C2420", muted: "#436B64", accent: "#0F766E", accentText: "#FFFFFF", border: "#CDE6E1", band: "#0C2420", bandText: "#DEF1EE" },
+  royal: { bg: "#FAFBFF", surface: "#E8EDFB", text: "#111633", muted: "#4E567E", accent: "#4338CA", accentText: "#FFFFFF", border: "#DBE1F5", band: "#111633", bandText: "#E8EDFB" },
+  blossom: { bg: "#FFFAFC", surface: "#FCE7F0", text: "#2A121F", muted: "#8A5872", accent: "#DB2777", accentText: "#FFFFFF", border: "#F6D6E4", band: "#2A121F", bandText: "#FCE7F0" },
+  mint: { bg: "#F6FCF9", surface: "#DDF3E9", text: "#0F2A20", muted: "#42715E", accent: "#059669", accentText: "#FFFFFF", border: "#CBE9DC", band: "#0F2A20", bandText: "#DDF3E9" },
+  sky: { bg: "#F7FBFF", surface: "#E1EFFB", text: "#0E2233", muted: "#4A6580", accent: "#0284C7", accentText: "#FFFFFF", border: "#D2E5F4", band: "#0E2233", bandText: "#E1EFFB" },
+  volt: { bg: "#0B0D0A", surface: "#161A12", text: "#F2FBE8", muted: "#9DB088", accent: "#84CC16", accentText: "#0B0D0A", border: "#2A331C", band: "#84CC16", bandText: "#0B0D0A" },
+  crimson: { bg: "#0C0708", surface: "#1B1012", text: "#FBEAEC", muted: "#B08A8F", accent: "#F43F5E", accentText: "#0C0708", border: "#331B1F", band: "#F43F5E", bandText: "#0C0708" },
+  ice: { bg: "#07131A", surface: "#0F2530", text: "#E7F6FC", muted: "#84A6B3", accent: "#22D3EE", accentText: "#07131A", border: "#173743", band: "#22D3EE", bandText: "#07131A" },
+  ink: { bg: "#FCFCFC", surface: "#F2F2F1", text: "#0A0A0A", muted: "#6B6B69", accent: "#111111", accentText: "#FFFFFF", border: "#E6E6E4", band: "#111111", bandText: "#F2F2F1" },
+  sand: { bg: "#FCFAF6", surface: "#F0EBE1", text: "#26211A", muted: "#726A5C", accent: "#9A7B4F", accentText: "#FFFFFF", border: "#E6DFD1", band: "#26211A", bandText: "#F0EBE1" },
+  sage: { bg: "#F9FBF8", surface: "#E7EEE3", text: "#1E2A1C", muted: "#5C6B54", accent: "#5B7553", accentText: "#FFFFFF", border: "#D8E2D2", band: "#1E2A1C", bandText: "#E7EEE3" },
+  navy: { bg: "#F7F8FA", surface: "#E9ECF2", text: "#0B1220", muted: "#4C5670", accent: "#1D4ED8", accentText: "#FFFFFF", border: "#DBE0EA", band: "#0B1220", bandText: "#E9ECF2" },
+  forest: { bg: "#F6FAF7", surface: "#E2EEE5", text: "#0F241A", muted: "#48705B", accent: "#15803D", accentText: "#FFFFFF", border: "#D1E4D6", band: "#0F241A", bandText: "#E2EEE5" },
+  grape: { bg: "#FAF8FD", surface: "#EDE7F7", text: "#1E1233", muted: "#5B4E7E", accent: "#7C3AED", accentText: "#FFFFFF", border: "#DFD6F0", band: "#1E1233", bandText: "#EDE7F7" },
 };
 
 export function getThemePalette(theme: string): ThemePalette {
-  return THEMES[theme] ?? THEMES.amber;
+  return THEMES[theme] ?? THEMES.ember;
 }
+
+export const FONT_STACKS: Record<FontKey, { heading: string; body: string; import: string }> = {
+  sans: {
+    heading: "'Inter', ui-sans-serif, system-ui, sans-serif",
+    body: "'Inter', ui-sans-serif, system-ui, sans-serif",
+    import: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap",
+  },
+  serif: {
+    heading: "'Fraunces', ui-serif, Georgia, serif",
+    body: "'Inter', ui-sans-serif, system-ui, sans-serif",
+    import:
+      "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap",
+  },
+  grotesk: {
+    heading: "'Space Grotesk', ui-sans-serif, system-ui, sans-serif",
+    body: "'Inter', ui-sans-serif, system-ui, sans-serif",
+    import:
+      "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap",
+  },
+  rounded: {
+    heading: "'Poppins', ui-sans-serif, system-ui, sans-serif",
+    body: "'Poppins', ui-sans-serif, system-ui, sans-serif",
+    import: "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap",
+  },
+};

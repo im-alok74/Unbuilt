@@ -351,6 +351,36 @@ function BuildForLead({
               </div>
             </div>
 
+            <div>
+              <p className="mb-1.5 text-[11px] font-medium text-gray-400">WhatsApp button</p>
+              <div className="space-y-2">
+                <Input
+                  defaultValue={site.contentJson.whatsapp ?? ""}
+                  placeholder="Number with country code, e.g. 919876543210"
+                  onBlur={(e) => {
+                    const v = e.target.value.replace(/[^\d]/g, "");
+                    if (v !== (site.contentJson.whatsapp ?? ""))
+                      patch({ content: { whatsapp: v } });
+                  }}
+                />
+                <textarea
+                  defaultValue={site.contentJson.whatsappMessage ?? ""}
+                  placeholder="Pre-filled message when they tap the button"
+                  rows={2}
+                  onBlur={(e) => {
+                    if (e.target.value !== (site.contentJson.whatsappMessage ?? ""))
+                      patch({ content: { whatsappMessage: e.target.value } });
+                  }}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-accent focus:outline-none"
+                />
+                {!site.contentJson.whatsapp && (
+                  <p className="text-[10px] text-gray-400">
+                    No number set — the WhatsApp button is hidden on the site.
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
                 <span className="mb-1 block text-[11px] font-medium text-gray-400">

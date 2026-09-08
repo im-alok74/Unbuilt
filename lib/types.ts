@@ -111,6 +111,11 @@ export interface SiteService {
   body: string;
 }
 
+export interface SiteHighlight {
+  value: string;
+  label: string;
+}
+
 export interface SiteContent {
   businessName: string;
   tagline: string;
@@ -120,11 +125,14 @@ export interface SiteContent {
   aboutTitle: string;
   aboutBody: string;
   services: SiteService[];
+  highlights: SiteHighlight[];
   hoursTitle: string;
   hours: string[];
   address: string;
   phone: string;
-  mapLink: string;
+  whatsapp: string; // bare international digits, e.g. 919876543210
+  whatsappMessage: string;
+  mapLink: string; // "get directions" URL
   footerNote: string;
 }
 

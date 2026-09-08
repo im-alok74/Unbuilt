@@ -21,6 +21,7 @@ export async function GET(
 }
 
 const serviceSchema = z.object({ title: z.string().max(120), body: z.string().max(500) });
+const highlightSchema = z.object({ value: z.string().max(60), label: z.string().max(80) });
 const contentSchema = z.object({
   businessName: z.string().max(200),
   tagline: z.string().max(120),
@@ -30,10 +31,13 @@ const contentSchema = z.object({
   aboutTitle: z.string().max(80),
   aboutBody: z.string().max(1200),
   services: z.array(serviceSchema).max(8),
+  highlights: z.array(highlightSchema).max(3),
   hoursTitle: z.string().max(80),
   hours: z.array(z.string().max(120)).max(14),
   address: z.string().max(400),
   phone: z.string().max(60),
+  whatsapp: z.string().max(20),
+  whatsappMessage: z.string().max(400),
   mapLink: z.string().max(500),
   footerNote: z.string().max(200),
 });
@@ -45,7 +49,7 @@ const patchSchema = z.object({
   photos: z
     .array(
       z.object({
-        url: z.string().url(),
+        url: z.string().min(1).max(2000),
         alt: z.string().max(200),
         source: z.enum(["places", "upload", "stock"]),
       }),

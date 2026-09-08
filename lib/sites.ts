@@ -7,14 +7,34 @@ import { getConfig } from "@/lib/settings";
 import { generateSiteCopy } from "@/lib/llm/provider";
 import { getTemplateMeta } from "@/lib/templates";
 import { slugify, randomSuffix } from "@/lib/slug";
-import type { BusinessRow, SiteContent, SitePhoto } from "@/lib/types";
+import { toWhatsappNumber, directionsLink } from "@/lib/whatsapp";
+import { resolvePhotoUrl } from "@/lib/photos";
+import type { BusinessRow, SiteContent, SiteHighlight, SitePhoto } from "@/lib/types";
 import type { SiteRecord } from "@/lib/db/schema";
 
 export function businessPhotosToSite(b: BusinessRow): SitePhoto[] {
   return (b.photos ?? [])
     .filter((p) => p.uri)
-    .slice(0, 8)
-    .map((p) => ({ url: p.uri!, alt: b.name, source: "places" as const }));
+    .slice(0, 9)
+    .map((p) => ({ url: resolvePhotoUrl(p.uri!, 1200), alt: b.name, source: "places" as const }));
+}
+
+function buildHighlights(b: BusinessRow): SiteHighlight[] {
+  const out: SiteHighlight[] = [];
+  if (b.rating != null && b.reviewCount > 0) {
+    out.push({ value: `${b.rating.toFixed(1)}★`, label: `${b.reviewCount} Google reviews` });
+  }
+  const openDays = (b.hours?.weekdayDescriptions ?? []).filter(
+    (d) => !/closed/i.test(d),
+  ).length;
+  if (openDays > 0) {
+    out.push({ value: openDays === 7 ? "7 days" : `${openDays} days`, label: "Open every week" });
+  }
+  if (b.categoryLabel) {
+    out.push({ value: b.categoryLabel, label: "What we do" });
+  }
+  if (b.phone) out.push({ value: "Same-day", label: "Replies to enquiries" });
+  return out.slice(0, 3);
 }
 
 export async function buildInitialContent(
@@ -24,6 +44,7 @@ export async function buildInitialContent(
   const meta = getTemplateMeta(templateId);
   const copy = await generateSiteCopy({ business: b, templateName: meta.name });
 
+  const wa = toWhatsappNumber(b.phone);
   const content: SiteContent = {
     businessName: b.name,
     tagline: copy.tagline,
@@ -33,11 +54,14 @@ export async function buildInitialContent(
     aboutTitle: copy.aboutTitle,
     aboutBody: copy.aboutBody,
     services: copy.services,
+    highlights: buildHighlights(b),
     hoursTitle: "Opening hours",
     hours: b.hours?.weekdayDescriptions ?? [],
     address: b.address ?? "",
     phone: b.phone ?? "",
-    mapLink: b.lat && b.lng ? `https://www.google.com/maps/search/?api=1&query=${b.lat},${b.lng}` : "",
+    whatsapp: wa,
+    whatsappMessage: `Hi ${b.name}, I found you on Google and wanted to ask about your services.`,
+    mapLink: directionsLink(b.lat, b.lng, b.address),
     footerNote: copy.footerNote,
   };
 

@@ -42,16 +42,22 @@ interface RawPlace {
   googleMapsUri?: string;
 }
 
+/** Direct Google media URL (key embedded) — server-side use only, never sent to a browser. */
 export function photoUrl(name: string, apiKey: string, maxWidthPx = 800): string {
   return `https://places.googleapis.com/v1/${name}/media?key=${apiKey}&maxWidthPx=${maxWidthPx}`;
 }
 
-function normalize(p: RawPlace, apiKey: string): NormalizedBusiness {
+/** Keyless proxy URL stored on the business + served to browsers. */
+export function proxyPhotoUrl(name: string, w = 800): string {
+  return `/api/photo?name=${encodeURIComponent(name)}&w=${w}`;
+}
+
+function normalize(p: RawPlace, _apiKey: string): NormalizedBusiness {
   const photos: PlacePhoto[] = (p.photos ?? []).map((ph) => ({
     name: ph.name,
     widthPx: ph.widthPx,
     heightPx: ph.heightPx,
-    uri: photoUrl(ph.name, apiKey),
+    uri: proxyPhotoUrl(ph.name, 1000),
   }));
   const websiteRaw = p.websiteUri ?? null;
   return {

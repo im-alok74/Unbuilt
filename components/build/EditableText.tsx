@@ -13,6 +13,7 @@ export function EditableText({
   editable,
   as = "span",
   className,
+  style,
   multiline = false,
   placeholder,
 }: {
@@ -21,6 +22,7 @@ export function EditableText({
   editable: boolean;
   as?: "span" | "h1" | "h2" | "h3" | "p" | "div";
   className?: string;
+  style?: React.CSSProperties;
   multiline?: boolean;
   placeholder?: string;
 }) {
@@ -43,7 +45,11 @@ export function EditableText({
   const Tag = as;
 
   if (!editable) {
-    return <Tag className={className}>{value || placeholder}</Tag>;
+    return (
+      <Tag className={className} style={style}>
+        {value || placeholder}
+      </Tag>
+    );
   }
 
   if (editing) {
@@ -62,9 +68,7 @@ export function EditableText({
           if (draft !== value) onChange(draft);
         }}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-            e.currentTarget.blur();
-          }
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.blur();
           if (e.key === "Escape") {
             setDraft(value);
             setEditing(false);
@@ -74,7 +78,7 @@ export function EditableText({
           "w-full resize-none rounded-md bg-black/5 outline outline-2 outline-blue-400/70",
           className,
         )}
-        style={{ font: "inherit", color: "inherit", lineHeight: "inherit" }}
+        style={{ font: "inherit", color: "inherit", lineHeight: "inherit", ...style }}
       />
     );
   }
@@ -86,6 +90,7 @@ export function EditableText({
         "cursor-text rounded-md outline-dashed outline-1 outline-transparent transition hover:bg-blue-400/10 hover:outline-blue-400/40",
         className,
       )}
+      style={style}
       title="Click to edit"
     >
       {value || <span className="opacity-40">{placeholder}</span>}

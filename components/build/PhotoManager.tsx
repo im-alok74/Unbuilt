@@ -4,6 +4,7 @@ import * as React from "react";
 import { Star, Trash2, Plus } from "lucide-react";
 import { Button, Input } from "@/components/ui/primitives";
 import type { SitePhoto, BusinessRow } from "@/lib/types";
+import { resolvePhotoUrl } from "@/lib/photos";
 import { cn } from "@/lib/utils";
 
 export function PhotoManager({
@@ -16,10 +17,10 @@ export function PhotoManager({
   onChange: (p: SitePhoto[]) => void;
 }) {
   const [url, setUrl] = React.useState("");
-  const usedUrls = new Set(photos.map((p) => p.url));
+  const usedUrls = new Set(photos.map((p) => resolvePhotoUrl(p.url)));
   const available = (business?.photos ?? [])
-    .filter((p) => p.uri && !usedUrls.has(p.uri))
-    .map((p) => p.uri!) as string[];
+    .map((p) => (p.uri ? resolvePhotoUrl(p.uri) : ""))
+    .filter((u) => u && !usedUrls.has(u)) as string[];
 
   function makeHero(i: number) {
     const next = [...photos];
@@ -42,7 +43,7 @@ export function PhotoManager({
         {photos.map((p, i) => (
           <div key={p.url} className="group relative overflow-hidden rounded-lg border border-gray-200">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={p.url} alt="" className="h-20 w-full object-cover" />
+            <img src={resolvePhotoUrl(p.url, 400)} alt="" className="h-20 w-full object-cover" />
             <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/50 opacity-0 transition group-hover:opacity-100">
               <button
                 onClick={() => makeHero(i)}
