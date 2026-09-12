@@ -1,5 +1,5 @@
 import "server-only";
-import { eq, desc, inArray, and, gte, sql, type SQL } from "drizzle-orm";
+import { eq, asc, desc, inArray, and, or, gte, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businesses, leads, sites } from "@/lib/db/schema";
 import type { BusinessRow, LeadStatus } from "@/lib/types";
@@ -53,9 +53,13 @@ export interface ListFilters {
   search?: string;
   sort?: "score" | "name" | "rating" | "reviews" | "recent";
   dir?: "asc" | "desc";
+  /** 1-based page number. Only applied when `pageSize` is also set. */
+  page?: number;
+  /** Row limit per page. Omit to fetch every matching row (used by map/export/build). */
+  pageSize?: number;
 }
 
-export async function listBusinessRows(filters: ListFilters = {}): Promise<BusinessRow[]> {
+function buildConds(filters: ListFilters): SQL[] {
   const conds: SQL[] = [];
   if (typeof filters.minScore === "number" && filters.minScore > 0) {
     conds.push(gte(businesses.score, filters.minScore));
@@ -69,41 +73,63 @@ export async function listBusinessRows(filters: ListFilters = {}): Promise<Busin
   if (filters.search && filters.search.trim()) {
     conds.push(sql`${businesses.name} ilike ${"%" + filters.search.trim() + "%"}`);
   }
+  if (filters.status && filters.status.length) {
+    const statusConds = filters.status.map((s) =>
+      s === "not_contacted"
+        ? sql`(${leads.status} = ${s} OR ${leads.status} IS NULL)`
+        : eq(leads.status, s),
+    );
+    conds.push(or(...statusConds)!);
+  }
+  return conds;
+}
 
-  const rows = await db
+function orderExprs(sort: ListFilters["sort"], dir: ListFilters["dir"]) {
+  const dirFn = dir === "asc" ? asc : desc;
+  switch (sort) {
+    case "name":
+      return [dirFn(businesses.name)];
+    case "rating":
+      return [dirFn(sql`coalesce(${businesses.rating}, 0)`)];
+    case "reviews":
+      return [dirFn(businesses.reviewCount)];
+    case "recent":
+      return [dirFn(businesses.lastScannedAt)];
+    default:
+      return [dirFn(businesses.score), dirFn(businesses.reviewCount)];
+  }
+}
+
+export async function listBusinessRows(filters: ListFilters = {}): Promise<BusinessRow[]> {
+  const conds = buildConds(filters);
+  const order = orderExprs(filters.sort ?? "score", filters.dir ?? "desc");
+
+  const baseQuery = db
     .select({ b: businesses, l: leads, s: sites })
     .from(businesses)
     .leftJoin(leads, eq(leads.businessId, businesses.id))
     .leftJoin(sites, eq(sites.businessId, businesses.id))
     .where(conds.length ? and(...conds) : undefined)
-    .orderBy(desc(businesses.score), desc(businesses.reviewCount));
+    .orderBy(...order);
 
-  let result = rows.map(toRow);
+  const rows = filters.pageSize
+    ? await baseQuery
+        .limit(filters.pageSize)
+        .offset((Math.max(1, filters.page ?? 1) - 1) * filters.pageSize)
+    : await baseQuery;
 
-  if (filters.status && filters.status.length) {
-    const set = new Set(filters.status);
-    result = result.filter((r) => set.has(r.leadStatus));
-  }
+  return rows.map(toRow);
+}
 
-  const sortKey = filters.sort ?? "score";
-  const dir = filters.dir ?? "desc";
-  const mul = dir === "asc" ? 1 : -1;
-  result.sort((a, b) => {
-    switch (sortKey) {
-      case "name":
-        return mul * a.name.localeCompare(b.name);
-      case "rating":
-        return mul * ((a.rating ?? 0) - (b.rating ?? 0));
-      case "reviews":
-        return mul * (a.reviewCount - b.reviewCount);
-      case "recent":
-        return mul * (Date.parse(a.lastScannedAt) - Date.parse(b.lastScannedAt));
-      default:
-        return mul * (a.score - b.score);
-    }
-  });
-
-  return result;
+/** Total rows matching `filters`, ignoring `page`/`pageSize`. */
+export async function countBusinessRows(filters: ListFilters = {}): Promise<number> {
+  const conds = buildConds(filters);
+  const result = await db
+    .select({ count: sql<number>`count(*)`.mapWith(Number) })
+    .from(businesses)
+    .leftJoin(leads, eq(leads.businessId, businesses.id))
+    .where(conds.length ? and(...conds) : undefined);
+  return result[0]?.count ?? 0;
 }
 
 export async function getBusinessRow(id: string): Promise<BusinessRow | null> {

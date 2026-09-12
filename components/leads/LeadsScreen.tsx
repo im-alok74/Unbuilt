@@ -1,7 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Search, SlidersHorizontal, Download, ArrowUpDown, ExternalLink } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  Download,
+  ArrowUpDown,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useBusinesses } from "@/lib/hooks";
 import { useApp, filtersToQuery, activeFilterCount } from "@/components/app-context";
 import { useToast } from "@/components/ui/toast";
@@ -13,16 +21,34 @@ import { formatINR, cn } from "@/lib/utils";
 
 type SortKey = "score" | "name" | "rating" | "reviews" | "recent";
 
+const PAGE_SIZE = 50;
+
 export function LeadsScreen() {
   const { filters, setFilters, openDetail, lastScanAt } = useApp();
   const { push } = useToast();
-  const query = filtersToQuery(filters);
-  const { businesses, isLoading, refresh } = useBusinesses(query);
+  const [page, setPage] = React.useState(1);
+  const baseQuery = filtersToQuery(filters);
+  const query = `${baseQuery ? baseQuery + "&" : ""}page=${page}&pageSize=${PAGE_SIZE}`;
+  const { businesses, total, isLoading, refresh } = useBusinesses(query);
   const [filterOpen, setFilterOpen] = React.useState(false);
 
   React.useEffect(() => {
     refresh();
   }, [lastScanAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Any change to filters/sort invalidates the current page's result set.
+  React.useEffect(() => {
+    setPage(1);
+  }, [baseQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
+
+  // A mutation (e.g. status change) can shrink the filtered total out from under the current page.
+  React.useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const nFilters = activeFilterCount(filters);
 
@@ -53,8 +79,9 @@ export function LeadsScreen() {
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Sites</h1>
             <p className="text-xs text-gray-400">
-              {businesses.length} {businesses.length === 1 ? "business" : "businesses"}
+              {total} {total === 1 ? "business" : "businesses"}
               {nFilters > 0 && " · filtered"}
+              {total > 0 && ` · showing ${rangeStart}–${rangeEnd}`}
             </p>
           </div>
           <div className="flex gap-2">
@@ -219,6 +246,30 @@ export function LeadsScreen() {
                 </button>
               ))}
             </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4 flex items-center justify-between">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="chrome flex h-9 items-center gap-1 rounded-full px-3 text-xs font-medium text-gray-600 disabled:opacity-40"
+                >
+                  <ChevronLeft size={14} />
+                  Prev
+                </button>
+                <span className="text-xs text-gray-400">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="chrome flex h-9 items-center gap-1 rounded-full px-3 text-xs font-medium text-gray-600 disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
