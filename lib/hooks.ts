@@ -34,13 +34,20 @@ export function useConfig() {
 }
 
 export function useBusinesses(query: string) {
-  const { data, error, isLoading, mutate } = useSWR<{ businesses: BusinessRow[] }>(
-    `/api/businesses${query ? "?" + query : ""}`,
-    fetcher,
-    { revalidateOnFocus: false, keepPreviousData: true },
-  );
+  const { data, error, isLoading, mutate } = useSWR<{
+    businesses: BusinessRow[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }>(`/api/businesses${query ? "?" + query : ""}`, fetcher, {
+    revalidateOnFocus: false,
+    keepPreviousData: true,
+  });
   return {
     businesses: data?.businesses ?? [],
+    total: data?.total ?? 0,
+    page: data?.page ?? 1,
+    pageSize: data?.pageSize ?? 0,
     error,
     isLoading,
     refresh: mutate,
