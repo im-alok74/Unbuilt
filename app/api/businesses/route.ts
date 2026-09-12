@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listBusinessRows, countBusinessRows, type ListFilters } from "@/lib/rows";
+import { listBusinessRowsPaged, type ListFilters } from "@/lib/rows";
 import type { LeadStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -19,14 +19,10 @@ export async function GET(req: NextRequest) {
     page,
     pageSize,
   };
-  const [rows, total] = await Promise.all([
-    listBusinessRows(filters),
-    // Only worth a second query when the caller is actually paginating.
-    pageSize ? countBusinessRows(filters) : Promise.resolve(undefined),
-  ]);
+  const { rows, total } = await listBusinessRowsPaged(filters);
   return NextResponse.json({
     businesses: rows,
-    total: total ?? rows.length,
+    total,
     page: page ?? 1,
     pageSize: pageSize ?? rows.length,
   });

@@ -132,6 +132,42 @@ export async function countBusinessRows(filters: ListFilters = {}): Promise<numb
   return result[0]?.count ?? 0;
 }
 
+/**
+ * Same as `listBusinessRows`, but for a paginated request it fetches the page
+ * and the matching total in a single round trip (via `count(*) over()`)
+ * instead of two separate queries.
+ */
+export async function listBusinessRowsPaged(
+  filters: ListFilters = {},
+): Promise<{ rows: BusinessRow[]; total: number }> {
+  if (!filters.pageSize) {
+    const rows = await listBusinessRows(filters);
+    return { rows, total: rows.length };
+  }
+
+  const conds = buildConds(filters);
+  const order = orderExprs(filters.sort ?? "score", filters.dir ?? "desc");
+  const page = Math.max(1, filters.page ?? 1);
+
+  const results = await db
+    .select({ b: businesses, l: leads, s: sites, total: sql<number>`count(*) over()`.mapWith(Number) })
+    .from(businesses)
+    .leftJoin(leads, eq(leads.businessId, businesses.id))
+    .leftJoin(sites, eq(sites.businessId, businesses.id))
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(...order)
+    .limit(filters.pageSize)
+    .offset((page - 1) * filters.pageSize);
+
+  if (results.length === 0) {
+    // No rows on this page — either there are truly no matches, or `page` is
+    // past the end (e.g. stale pagination after data changed elsewhere).
+    return { rows: [], total: await countBusinessRows(filters) };
+  }
+
+  return { rows: results.map(toRow), total: results[0].total };
+}
+
 export async function getBusinessRow(id: string): Promise<BusinessRow | null> {
   const rows = await db
     .select({ b: businesses, l: leads, s: sites })

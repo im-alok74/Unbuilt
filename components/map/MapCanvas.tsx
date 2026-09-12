@@ -21,12 +21,6 @@ interface Props {
 const DEFAULT_CENTER: [number, number] = [77.209, 28.6139];
 const ACCENT = "#12B76A";
 
-function esc(s: string) {
-  return s.replace(/[&<>"']/g, (c) =>
-    c === "&" ? "&amp;" : c === "<" ? "&lt;" : c === ">" ? "&gt;" : c === '"' ? "&quot;" : "&#39;",
-  );
-}
-
 function circlePolygon(lat: number, lng: number, radiusM: number) {
   const points = 64;
   const coords: [number, number][] = [];
@@ -43,6 +37,23 @@ function circlePolygon(lat: number, lng: number, radiusM: number) {
   };
 }
 
+function toFeatureCollection(businesses: BusinessRow[]) {
+  return {
+    type: "FeatureCollection" as const,
+    features: businesses
+      .filter((b) => b.lat != null && b.lng != null)
+      .map((b) => ({
+        type: "Feature" as const,
+        geometry: { type: "Point" as const, coordinates: [b.lng as number, b.lat as number] },
+        properties: {
+          id: b.id,
+          name: truncate(b.name, 6),
+          color: PIN_HEX[pinColor(b.websiteStatus, b.leadStatus)],
+        },
+      })),
+  };
+}
+
 export function MapCanvas({
   token,
   businesses,
@@ -55,7 +66,6 @@ export function MapCanvas({
 }: Props) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const mapRef = React.useRef<MbMap | null>(null);
-  const markersRef = React.useRef<Map<string, MbMarker>>(new Map());
   const dropMarkerRef = React.useRef<MbMarker | null>(null);
   const onDropRef = React.useRef(onDrop);
   const onPickRef = React.useRef(onPick);
@@ -137,11 +147,115 @@ export function MapCanvas({
             "line-opacity": 0.8,
           },
         });
+        map.addSource("businesses", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+          cluster: true,
+          clusterMaxZoom: 14,
+          clusterRadius: 45,
+        });
+        map.addLayer({
+          id: "clusters",
+          type: "circle",
+          source: "businesses",
+          filter: ["has", "point_count"],
+          paint: {
+            "circle-color": ACCENT,
+            "circle-opacity": 0.85,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#fff",
+            "circle-radius": [
+              "step",
+              ["get", "point_count"],
+              14,
+              25,
+              18,
+              100,
+              22,
+              750,
+              28,
+            ],
+          },
+        });
+        map.addLayer({
+          id: "cluster-count",
+          type: "symbol",
+          source: "businesses",
+          filter: ["has", "point_count"],
+          layout: {
+            "text-field": ["get", "point_count_abbreviated"],
+            "text-size": 12,
+          },
+          paint: { "text-color": "#fff" },
+        });
+        map.addLayer({
+          id: "unclustered-point",
+          type: "circle",
+          source: "businesses",
+          filter: ["!", ["has", "point_count"]],
+          paint: {
+            "circle-radius": 6.5,
+            "circle-color": ["get", "color"],
+            "circle-stroke-width": 3,
+            "circle-stroke-color": "#fff",
+          },
+        });
+        map.addLayer({
+          id: "unclustered-label",
+          type: "symbol",
+          source: "businesses",
+          filter: ["!", ["has", "point_count"]],
+          minzoom: 13,
+          layout: {
+            "text-field": ["get", "name"],
+            "text-size": 11,
+            "text-anchor": "left",
+            "text-offset": [1, 0],
+            "text-allow-overlap": false,
+          },
+          paint: {
+            "text-color": "#1f2937",
+            "text-halo-color": "#fff",
+            "text-halo-width": 1.5,
+          },
+        });
+
+        map.on("click", "clusters", (e) => {
+          const feature = map.queryRenderedFeatures(e.point, { layers: ["clusters"] })[0];
+          const clusterId = feature?.properties?.cluster_id;
+          const source = map.getSource("businesses") as import("mapbox-gl").GeoJSONSource;
+          if (clusterId == null || !feature) return;
+          if (feature.geometry.type !== "Point") return;
+          const [lng, lat] = feature.geometry.coordinates;
+          source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+            if (err || !map || zoom == null) return;
+            map.easeTo({ center: [lng, lat], zoom });
+          });
+        });
+        map.on("click", "unclustered-point", (e) => {
+          const id = e.features?.[0]?.properties?.id as string | undefined;
+          if (id) onPickRef.current(id);
+        });
+        for (const layer of ["clusters", "unclustered-point"]) {
+          map.on("mouseenter", layer, () => {
+            map.getCanvas().style.cursor = "pointer";
+          });
+          map.on("mouseleave", layer, () => {
+            map.getCanvas().style.cursor = "crosshair";
+          });
+        }
+
         map.getCanvas().style.cursor = "crosshair";
         setReady(true);
       });
 
       map.on("click", (e) => {
+        if (map.getLayer("clusters")) {
+          const hits = map.queryRenderedFeatures(e.point, {
+            layers: ["clusters", "unclustered-point"],
+          });
+          if (hits.length > 0) return; // handled by the layer-specific click listeners above
+        }
         onDropRef.current({ lat: e.lngLat.lat, lng: e.lngLat.lng });
       });
     })();
@@ -197,45 +311,13 @@ export function MapCanvas({
     }
   }, [recenterSignal, flyTo?.lat, flyTo?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // business markers
+  // business pins: one GPU-rendered clustered layer instead of a DOM marker per
+  // lead, since thousands of individual mapbox Markers makes panning/zooming unusable.
   React.useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    (async () => {
-      const mapboxgl = (await import("mapbox-gl")).default;
-      const seen = new Set<string>();
-      for (const b of businesses) {
-        if (b.lat == null || b.lng == null) continue;
-        seen.add(b.id);
-        const color = PIN_HEX[pinColor(b.websiteStatus, b.leadStatus)];
-        let marker = markersRef.current.get(b.id);
-        if (!marker) {
-          const el = document.createElement("button");
-          el.className = "group relative block";
-          el.style.transform = "translate(-50%,-50%)";
-          el.addEventListener("click", (ev) => {
-            ev.stopPropagation();
-            onPickRef.current(b.id);
-          });
-          marker = new mapboxgl.Marker({ element: el, anchor: "center" }).setLngLat([b.lng, b.lat]);
-          marker.addTo(map);
-          markersRef.current.set(b.id, marker);
-        } else {
-          marker.setLngLat([b.lng, b.lat]);
-        }
-        marker.getElement().innerHTML = `
-          <span style="display:block;width:13px;height:13px;border-radius:9999px;background:${color};box-shadow:0 0 0 3px #fff,0 1px 4px rgba(0,0,0,0.25)"></span>
-          <span class="map-pin-label" style="position:absolute;left:17px;top:50%;transform:translateY(-50%)">${esc(
-            truncate(b.name, 6),
-          )}</span>`;
-      }
-      for (const [id, marker] of markersRef.current) {
-        if (!seen.has(id)) {
-          marker.remove();
-          markersRef.current.delete(id);
-        }
-      }
-    })();
+    const source = map.getSource("businesses") as import("mapbox-gl").GeoJSONSource | undefined;
+    source?.setData(toFeatureCollection(businesses));
   }, [businesses, ready]);
 
   // Outer wrapper keeps sizing: mapbox-gl.css forces `position: relative` on its
