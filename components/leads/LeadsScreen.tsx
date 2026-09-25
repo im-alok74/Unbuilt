@@ -135,6 +135,9 @@ export function LeadsScreen() {
                 onClick={() => setNicheMenuOpen((o) => !o)}
                 className="chrome grid h-10 w-10 place-items-center rounded-full text-accent"
                 title="Download by niche (no website)"
+                aria-haspopup="menu"
+                aria-expanded={nicheMenuOpen}
+                aria-controls="niche-download-menu"
               >
                 <Tag size={16} />
               </button>
@@ -144,13 +147,18 @@ export function LeadsScreen() {
                     className="fixed inset-0 z-40"
                     onClick={() => setNicheMenuOpen(false)}
                   />
-                  <div className="chrome absolute right-0 top-12 z-50 w-64 rounded-2xl p-2 shadow-chrome">
+                  <div
+                    id="niche-download-menu"
+                    role="menu"
+                    className="chrome absolute right-0 top-12 z-50 w-64 rounded-2xl p-2 shadow-chrome"
+                  >
                     <p className="px-2 pb-1.5 pt-1 text-[11px] font-medium text-gray-400">
                       Download by niche · no website only
                     </p>
                     {NICHES.map((n) => (
                       <button
                         key={n.id}
+                        role="menuitem"
                         onClick={() => downloadNiche(n.id, n.label)}
                         className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
                       >

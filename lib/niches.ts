@@ -18,7 +18,9 @@ export const NICHES: NicheDef[] = [
   {
     id: "ngo",
     label: "NGO / Nonprofit",
-    types: ["local_government_office", "community_center"],
+    // Google Places has no dedicated NGO type — "local_government_office" and
+    // "community_center" are not NGOs, so this niche is keyword-only.
+    types: [],
     keywords: ["ngo", "foundation", "trust", "welfare", "charitable", "society"],
   },
   {
@@ -31,7 +33,9 @@ export const NICHES: NicheDef[] = [
   { id: "school", label: "School", types: ["school", "primary_school", "secondary_school"] },
   { id: "cafe", label: "Good Cafe", types: ["cafe", "coffee_shop"], qualityFilter: true },
   { id: "restaurant", label: "Good Restaurant", types: ["restaurant"], qualityFilter: true },
-  { id: "hotel", label: "Good Hotel", types: ["lodging", "hotel"], qualityFilter: true },
+  // "lodging" is Google's umbrella type (also covers hostels, guest houses,
+  // vacation rentals) — "hotel" alone is the specific, accurate type.
+  { id: "hotel", label: "Good Hotel", types: ["hotel"], qualityFilter: true },
 ];
 
 export function getNiche(id: string): NicheDef | undefined {

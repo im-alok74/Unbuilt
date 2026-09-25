@@ -14,8 +14,10 @@ function getDb(): PostgresJsDatabase<typeof schema> {
   }
   // Supabase's Supavisor pooler (transaction mode, port 6543) doesn't support
   // prepared statements, and `max: 1` keeps each serverless invocation to a
-  // single pooled connection instead of opening its own mini-pool.
-  const client = postgres(url, { prepare: false, max: 1 });
+  // single pooled connection instead of opening its own mini-pool. `ssl:
+  // "require"` makes the encrypted transport explicit rather than relying on
+  // the pooler's default.
+  const client = postgres(url, { prepare: false, max: 1, ssl: "require" });
   _db = drizzle(client, { schema });
   return _db;
 }

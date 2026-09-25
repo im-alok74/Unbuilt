@@ -8,19 +8,22 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
+  // `has` distinguishes "no ?niche= at all" (general export) from "?niche="
+  // with an empty value, which should 400 like any other unknown niche id.
+  const nicheParamPresent = p.has("niche");
   const nicheId = p.get("niche");
 
   let rows;
   let stampSuffix = "leads";
-  if (nicheId) {
-    const niche = getNiche(nicheId);
+  if (nicheParamPresent) {
+    const niche = getNiche(nicheId ?? "");
     if (!niche) {
       return NextResponse.json(
         { error: `Unknown niche "${nicheId}". Valid: ${NICHES.map((n) => n.id).join(", ")}` },
         { status: 400 },
       );
     }
-    rows = await listNicheLeads(nicheId);
+    rows = await listNicheLeads(niche.id);
     stampSuffix = `${niche.id}-no-website`;
   } else {
     const filters: ListFilters = {

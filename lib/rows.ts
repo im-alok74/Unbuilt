@@ -191,12 +191,17 @@ async function listNicheLeadsUncached(nicheId: string): Promise<BusinessRow[]> {
   const niche = getNiche(nicheId);
   if (!niche) return [];
 
-  const matchConds: SQL[] = [
-    inArray(businesses.category, niche.types),
-    sql`${businesses.types} ?| ${niche.types}`,
-  ];
+  const matchConds: SQL[] = [];
+  if (niche.types.length) {
+    matchConds.push(
+      inArray(businesses.category, niche.types),
+      sql`${businesses.types} ?| ${niche.types}`,
+    );
+  }
   if (niche.keywords?.length) {
-    const pattern = niche.keywords.join("|");
+    // `\y` is Postgres's word-boundary escape (not `\b`, which ARE regex
+    // treats as a literal backspace) — keeps "ngo" from matching "Bingo".
+    const pattern = `\\y(${niche.keywords.join("|")})\\y`;
     matchConds.push(
       sql`(${businesses.name} ~* ${pattern} OR ${businesses.categoryLabel} ~* ${pattern})`,
     );
