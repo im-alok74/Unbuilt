@@ -1,10 +1,10 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
+import postgres from "postgres";
+import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
 
-let _db: NeonHttpDatabase<typeof schema> | null = null;
+let _db: PostgresJsDatabase<typeof schema> | null = null;
 
-function getDb(): NeonHttpDatabase<typeof schema> {
+function getDb(): PostgresJsDatabase<typeof schema> {
   if (_db) return _db;
   const url = process.env.DATABASE_URL;
   if (!url) {
@@ -12,7 +12,11 @@ function getDb(): NeonHttpDatabase<typeof schema> {
       "DATABASE_URL is not set. Add it in the Vercel project's Environment Variables (or .env.local for local dev).",
     );
   }
-  _db = drizzle(neon(url), { schema });
+  // Supabase's Supavisor pooler (transaction mode, port 6543) doesn't support
+  // prepared statements, and `max: 1` keeps each serverless invocation to a
+  // single pooled connection instead of opening its own mini-pool.
+  const client = postgres(url, { prepare: false, max: 1 });
+  _db = drizzle(client, { schema });
   return _db;
 }
 
@@ -20,7 +24,7 @@ function getDb(): NeonHttpDatabase<typeof schema> {
  * Lazily-initialised Drizzle client. The connection is only created on first
  * query, so `next build` succeeds even when DATABASE_URL is absent at build time.
  */
-export const db = new Proxy({} as NeonHttpDatabase<typeof schema>, {
+export const db = new Proxy({} as PostgresJsDatabase<typeof schema>, {
   get(_target, prop) {
     const real = getDb() as unknown as Record<string | symbol, unknown>;
     const value = real[prop];

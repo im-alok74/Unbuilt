@@ -1,8 +1,11 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { eq, asc, desc, inArray, and, or, gte, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businesses, leads, sites } from "@/lib/db/schema";
 import type { BusinessRow, LeadStatus } from "@/lib/types";
+import { getNiche } from "@/lib/niches";
+import { LEADS_LIST_TAG, NICHE_LEADS_TAG } from "@/lib/cache";
 
 const STALE_MS = 30 * 24 * 60 * 60 * 1000; // Places content cache limit
 
@@ -137,7 +140,7 @@ export async function countBusinessRows(filters: ListFilters = {}): Promise<numb
  * and the matching total in a single round trip (via `count(*) over()`)
  * instead of two separate queries.
  */
-export async function listBusinessRowsPaged(
+async function listBusinessRowsPagedUncached(
   filters: ListFilters = {},
 ): Promise<{ rows: BusinessRow[]; total: number }> {
   if (!filters.pageSize) {
@@ -167,6 +170,62 @@ export async function listBusinessRowsPaged(
 
   return { rows: results.map(toRow), total: results[0].total };
 }
+
+/**
+ * Cached for a short window so repeat page loads / SWR revalidation with the
+ * same filters reuse the last result instead of hitting Postgres again — the
+ * main lever for keeping database request volume (and egress) low.
+ */
+export const listBusinessRowsPaged = unstable_cache(
+  listBusinessRowsPagedUncached,
+  ["businesses-list-paged"],
+  { revalidate: 30, tags: [LEADS_LIST_TAG] },
+);
+
+/**
+ * Leads matching a "download by niche" preset (see `lib/niches.ts`): always
+ * scoped to businesses with no real website, optionally gated to a rating/
+ * review-count quality bar for niches like "good cafe".
+ */
+async function listNicheLeadsUncached(nicheId: string): Promise<BusinessRow[]> {
+  const niche = getNiche(nicheId);
+  if (!niche) return [];
+
+  const matchConds: SQL[] = [
+    inArray(businesses.category, niche.types),
+    sql`${businesses.types} ?| ${niche.types}`,
+  ];
+  if (niche.keywords?.length) {
+    const pattern = niche.keywords.join("|");
+    matchConds.push(
+      sql`(${businesses.name} ~* ${pattern} OR ${businesses.categoryLabel} ~* ${pattern})`,
+    );
+  }
+
+  const conds: SQL[] = [
+    inArray(businesses.websiteStatus, ["none", "social"]),
+    or(...matchConds)!,
+  ];
+  if (niche.qualityFilter) {
+    conds.push(sql`${businesses.rating} >= 4.0 AND ${businesses.reviewCount} >= 10`);
+  }
+
+  const rows = await db
+    .select({ b: businesses, l: leads, s: sites })
+    .from(businesses)
+    .leftJoin(leads, eq(leads.businessId, businesses.id))
+    .leftJoin(sites, eq(sites.businessId, businesses.id))
+    .where(and(...conds))
+    .orderBy(desc(businesses.score), desc(businesses.reviewCount));
+
+  return rows.map(toRow);
+}
+
+export const listNicheLeads = unstable_cache(
+  listNicheLeadsUncached,
+  ["niche-leads"],
+  { revalidate: 120, tags: [NICHE_LEADS_TAG] },
+);
 
 export async function getBusinessRow(id: string): Promise<BusinessRow | null> {
   const rows = await db

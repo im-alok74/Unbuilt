@@ -13,13 +13,13 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.4",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.38.3",
     "jose": "^5.9.6",
     "lucide-react": "^0.469.0",
     "mapbox-gl": "^3.9.3",
     "next": "^15.5.25",
+    "postgres": "^3.4.9",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "swr": "^2.3.0",

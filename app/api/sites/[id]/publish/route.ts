@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { sites } from "@/lib/db/schema";
 import { getSite } from "@/lib/sites";
 import { getBusinessRow } from "@/lib/rows";
+import { revalidateLeadsCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export async function POST(
     .where(eq(sites.id, id))
     .returning();
 
+  revalidateLeadsCache();
   const business = await getBusinessRow(site.businessId);
   return NextResponse.json({
     site: updated[0],
