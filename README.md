@@ -33,6 +33,7 @@ no PIN in the DB, the unlock screen lets you set one.
 | Var | Required | Notes |
 |-----|----------|-------|
 | `DATABASE_URL` | yes | Supabase pooled (Supavisor transaction, port 6543) connection string |
+| `DATABASE_CA_CERT` | no | pooler's CA cert (PEM) for full TLS verification; without it the connection is encrypted but not identity-verified |
 | `ENCRYPTION_KEY` | yes | 32-byte base64 — encrypts API keys stored in the DB |
 | `AUTH_SECRET` | yes | 32-byte base64 — signs the session cookie |
 | `APP_PIN` | no | first-run PIN; ignored once a PIN is set in the You tab |
