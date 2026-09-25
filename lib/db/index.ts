@@ -14,11 +14,19 @@ function getDb(): PostgresJsDatabase<typeof schema> {
   }
   // Supabase's Supavisor pooler (transaction mode, port 6543) doesn't support
   // prepared statements, and `max: 1` keeps each serverless invocation to a
-  // single pooled connection instead of opening its own mini-pool. `ssl:
-  // "verify-full"` (not "require", which postgres-js maps to
-  // `rejectUnauthorized: false` — encrypted but MITM-able) validates the
-  // pooler's certificate against Node's trusted CA store and its hostname.
-  const client = postgres(url, { prepare: false, max: 1, ssl: "verify-full" });
+  // single pooled connection instead of opening its own mini-pool.
+  //
+  // TLS: `ssl: "require"` (postgres-js's default when a URL's sslmode isn't
+  // set) encrypts the connection but sets `rejectUnauthorized: false`, so it
+  // doesn't verify the pooler's identity — a network-positioned attacker
+  // could in principle impersonate it. Full verification needs Supabase's
+  // pooler CA (Project Settings → Database → SSL Configuration in the
+  // Supabase dashboard, not obtainable via API); set DATABASE_CA_CERT to its
+  // PEM contents to enable it. Until that's set, this falls back to
+  // encrypted-but-unverified rather than refusing to start.
+  const caCert = process.env.DATABASE_CA_CERT;
+  const ssl = caCert ? { ca: caCert, rejectUnauthorized: true } : ("require" as const);
+  const client = postgres(url, { prepare: false, max: 1, ssl });
   _db = drizzle(client, { schema });
   return _db;
 }
