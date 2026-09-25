@@ -6,6 +6,7 @@ import { sites } from "@/lib/db/schema";
 import { getSite } from "@/lib/sites";
 import { getTemplateMeta } from "@/lib/templates";
 import { getBusinessRow } from "@/lib/rows";
+import { revalidateLeadsCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,7 @@ export async function PATCH(
   }
 
   const updated = await db.update(sites).set(set).where(eq(sites.id, id)).returning();
+  revalidateLeadsCache();
   const business = await getBusinessRow(current.businessId);
   return NextResponse.json({ site: updated[0], business });
 }

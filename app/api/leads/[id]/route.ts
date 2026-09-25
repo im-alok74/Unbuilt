@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { leads } from "@/lib/db/schema";
 import { getBusinessRow } from "@/lib/rows";
+import { revalidateLeadsCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export async function PATCH(
       },
     });
 
+  revalidateLeadsCache();
   const row = await getBusinessRow(id);
   return NextResponse.json({ business: row });
 }
