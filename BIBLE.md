@@ -44,7 +44,7 @@ Admin (you)
 
 | Service | Free tier | Used for |
 |---------|-----------|----------|
-| **Neon Postgres** | 0.5 GB storage, 5 GB network transfer/month, 190 compute-hours | All data (see 3.4) |
+| **Supabase Postgres** | 500 MB database, 5 GB egress/month, pauses after a week idle | All data (see 3.4, 33) |
 | **Vercel** (Hobby) | 100 GB bandwidth, serverless functions | Hosting (see ToS note below) |
 | **Mapbox** | 50,000 map loads/month | Map view (manager only) |
 | **Gemini** (`gemini-flash-lite-latest`) | 1,500 requests/day | Pitch generation, site copy |
@@ -52,7 +52,7 @@ Admin (you)
 | **Overpass (OpenStreetMap)** | Unlimited | Supplement Places data for free |
 | **Web Push (VAPID)** | Free forever | Notifications to reps |
 
-### 3.4 Neon network cap (learned the hard way)
+### 3.4 Database network cap (learned the hard way, on Neon)
 
 On 2026-09-26 the `unbuilt` project hit Neon's **5 GB/month network transfer cap** (5.59 GB used) and every query started failing with "exceeded the quota" until the monthly reset on Oct 1. Cause: list queries selected every column, including a huge `raw_json` that nothing reads, for every business, on every map refresh. Fixed in code:
 
@@ -861,13 +861,13 @@ Other additions: DB-checked sessions (deactivating a user logs them out on their
 
 ## 31. Go-Live Checklist
 
-1. **Neon quota.** The production DB (`unbuilt`) is locked until **2026-10-01** (network cap, see 3.4) unless you upgrade. Until then all development ran against a scratch project, `unbuilt-dev`, which can be deleted after go-live.
+1. **Database.** The app moved from Neon to Supabase (section 33). The old Neon project is locked until 2026-10-01 and is no longer used; `unbuilt-dev` on Neon was only a scratch DB and can be deleted.
 2. **Vercel env vars** (Project → Settings → Environment Variables). Values for the ones below are in the gitignored `.env.local`:
    - `ADMIN_USERNAME`, `ADMIN_PASSWORD` (if unset, the admin is `admin` with the old `APP_PIN` as password; change it in You → Account straight away)
    - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
    - `CRON_SECRET`
    - existing: `DATABASE_URL`, `ENCRYPTION_KEY`, `AUTH_SECRET`, `NEXT_PUBLIC_MAPBOX_TOKEN`, `GOOGLE_PLACES_API_KEY`, `GEMINI_API_KEY`
-3. **Schema.** With the quota available run `npm run db:push` against the production `DATABASE_URL`. It is additive only (new tables and columns), nothing is dropped.
+3. **Schema.** Run `supabase/schema.sql` in the Supabase SQL Editor (section 33).
 4. **Deploy** (push the branch, merge to `main`; Vercel auto-deploys).
 5. **First login** at `/login` as the admin. Add the manager (Team → Reps → role Manager), then the manager adds reps and shares username + password with each.
 6. **Google Cloud.** In the Places API quotas page set a per-day cap of about 35 requests. That makes overspend physically impossible even if the app has a bug.
@@ -886,6 +886,17 @@ Other additions: DB-checked sessions (deactivating a user logs them out on their
 - **Rep requests:** Team → Requests. Approve, do the scan/import, assign, mark Done. The rep gets a push notification at each step.
 - **Money:** a rep marks a lead Won and enters the project value. Commission = value × their %. The admin marks it paid in Team → Overview → Won deals.
 - **Watch:** Team → Overview shows who is under target today (amber), leads nobody has touched for 3+ days, and Google calls used.
+
+## 33. Database: Supabase (switched 2026-09-26, started fresh)
+
+- Project **unbuilt**, ref `ftsrfnkiiewkturuqgiu`, Singapore. Old scan data on Neon was not migrated.
+- The app uses `pg` (node-postgres) through Drizzle in `lib/db/index.ts`, one connection per serverless instance, TLS certificate verification on. Any Postgres URL works (Supabase, Neon, local).
+- **Setup, once:**
+  1. Supabase Dashboard -> SQL Editor -> paste `supabase/schema.sql` -> Run. It replaces the five empty starter tables with the full schema and turns Row Level Security on for every table (the app's server connection bypasses RLS; the public API keys are locked out).
+  2. Dashboard -> Connect -> **Transaction pooler** connection string (port 6543, host `...pooler.supabase.com`). Put it in `DATABASE_URL` in Vercel and `.env.local`, replacing the Neon URL.
+  3. If the app cannot connect with a certificate error, download the Supabase root CA (Dashboard -> Database -> Settings -> SSL Configuration) and put its PEM text in an env var `DATABASE_CA`.
+- Later schema changes: edit `lib/db/schema.ts`, then `npx drizzle-kit push` (use the **direct** connection string, port 5432, for that command only).
+- Free-tier watch-outs: 5 GB egress a month (the slim list queries exist for this), and the project pauses after 7 days without activity. The daily cron digest keeps it awake.
 
 *Last updated: 2026-09-26*
 
