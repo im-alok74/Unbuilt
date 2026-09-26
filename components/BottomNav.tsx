@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MapPin, Sparkles, LayoutGrid, User, Users, ListChecks } from "lucide-react";
+import { Home, MapPin, User, Users, ListChecks, Bug } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
-  { key: "drop", label: "Drop", icon: MapPin, href: "/map" },
-  { key: "pool", label: "Pool", icon: ListChecks, href: "/pool" },
+  { key: "home", label: "Home", icon: Home, href: "/home" },
+  { key: "pool", label: "Leads", icon: ListChecks, href: "/pool" },
+  { key: "drop", label: "Find", icon: MapPin, href: "/map" },
   { key: "team", label: "Team", icon: Users, href: "/team" },
-  { key: "build", label: "Build", icon: Sparkles, href: "/build" },
-  { key: "sites", label: "Sites", icon: LayoutGrid, href: "/sites" },
+  { key: "issues", label: "Issues", icon: Bug, href: "/issues" },
   { key: "you", label: "You", icon: User, href: "/you" },
 ];
 
@@ -23,7 +23,7 @@ export function BottomNav() {
         {ITEMS.map((it) => {
           const Icon = it.icon;
           const active =
-            it.href === "/map" ? pathname === "/map" : pathname.startsWith(it.href);
+            pathname === it.href || pathname.startsWith(it.href + "/");
           return (
             <Link key={it.key} href={it.href} className="flex-1">
               <span

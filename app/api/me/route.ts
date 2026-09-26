@@ -18,5 +18,5 @@ export async function GET() {
     phone: u.phone,
     commissionPct: u.commissionPct,
     dailyTarget: u.dailyTarget,
-  });
+  }, { headers: { "Cache-Control": "no-store" } });
 }

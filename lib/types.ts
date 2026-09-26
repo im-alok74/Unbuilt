@@ -211,6 +211,8 @@ export interface BusinessRow {
   nextFollowUp: string | null;
   pitchText: string | null;
   projectValue: number | null;
+  quotePackage: string | null;
+  quoteAmount: number | null;
   siteStatus: SiteStatus | null;
   siteId: string | null;
   siteSlug: string | null;

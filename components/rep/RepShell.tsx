@@ -4,7 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, List, PlusCircle, BarChart3, WifiOff } from "lucide-react";
-import { mutate } from "swr";
+import { useSWRConfig } from "swr";
+import { SwrProvider } from "@/components/SwrProvider";
 import { ToastProvider, useToast } from "@/components/ui/toast";
 import { flushQueue, pendingCount } from "@/lib/offline";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,7 @@ const ITEMS = [
 function Inner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { push } = useToast();
+  const { mutate } = useSWRConfig();
   const [offline, setOffline] = React.useState(false);
 
   React.useEffect(() => {
@@ -76,8 +78,8 @@ function Inner({ children }: { children: React.ReactNode }) {
 
 export function RepShell({ children }: { children: React.ReactNode }) {
   return (
-    <ToastProvider>
+    <SwrProvider><ToastProvider>
       <Inner>{children}</Inner>
-    </ToastProvider>
+    </ToastProvider></SwrProvider>
   );
 }

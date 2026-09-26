@@ -9,6 +9,7 @@ import { ensureLead, logActivity, updateLead } from "@/lib/leads";
 import { normPhone } from "@/lib/phone";
 import { notifyStaff } from "@/lib/push";
 import { STAGES } from "@/lib/types";
+import { PACKAGES, MIN_PRICE, MAX_PRICE } from "@/lib/packages";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,8 @@ const patchSchema = z.object({
   notes: z.string().max(4000).optional(),
   nextFollowUp: z.string().datetime().nullable().optional(),
   projectValue: z.number().int().min(1).max(100_000_000).optional(),
+  /** The quote just sent: package id and price (INR). Moves an early lead to Quoted. */
+  quote: z.object({ package: z.enum(PACKAGES.map((p) => p.id) as [string, ...string[]]), amount: z.number().int().min(MIN_PRICE).max(MAX_PRICE) }).optional(),
   /** A touch to record: a tap on Call/WhatsApp, an outcome tag, or a do-not-call flag. */
   log: z
     .object({
@@ -67,7 +70,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ("err" in g) return g.err;
   const p = patchSchema.safeParse(await req.json().catch(() => null));
   if (!p.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  const { log, ...patch } = p.data;
+  const { log, quote, ...patch } = p.data;
   const stage = patch.stage as (typeof STAGES)[number] | undefined;
 
   if (stage === "won" && !patch.projectValue && !g.lead?.projectValue) {
@@ -75,11 +78,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const lead = await ensureLead(id);
-  await updateLead(id, g.s.userId, { ...patch, stage });
+  await updateLead(id, g.s.userId, { ...patch, stage, ...(quote ? { quotePackage: quote.package, quoteAmount: quote.amount } : {}) });
+  if (quote && !stage && ["new", "contacted", "demo_sent"].includes(lead.stage)) {
+    await updateLead(id, g.s.userId, { stage: "quoted" });
+  }
 
   // First real touch moves a "new" lead to "contacted".
   const touched = log && ["called", "whatsapped", "no_answer", "callback", "not_interested", "wrong_number"].includes(log.action);
-  if (touched && !stage && lead.stage === "new") await updateLead(id, g.s.userId, { stage: "contacted" });
+  if (touched && !stage && !quote && lead.stage === "new") await updateLead(id, g.s.userId, { stage: "contacted" });
 
   if (log) {
     await logActivity(lead.id, g.s.userId, log.action, log.detail);

@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, Trophy } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Trophy, Bug } from "lucide-react";
 import { useSummary } from "@/components/rep/TodayScreen";
 import { useMe } from "@/lib/hooks";
 import { Button, Input, Spinner } from "@/components/ui/primitives";
@@ -30,6 +31,7 @@ export function StatsScreen() {
 
   async function signOut() {
     await fetch("/api/lock", { method: "POST" });
+    try { localStorage.removeItem("swr-cache"); } catch {}
     router.replace("/login");
   }
 
@@ -96,6 +98,9 @@ export function StatsScreen() {
             Change
           </Button>
         </div>
+        <Link href="/rep/issues" className="flex h-10 w-full items-center justify-center gap-2 rounded-full border border-gray-300 text-sm font-medium text-gray-800">
+          <Bug size={15} /> Report a problem
+        </Link>
         <Button variant="outline" className="w-full" onClick={signOut}>
           <LogOut size={15} /> Sign out
         </Button>

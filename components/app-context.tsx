@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { mutate } from "swr";
+import { useSWRConfig } from "swr";
 import type { LeadStatus } from "@/lib/types";
 
 export interface LeadFilters {
@@ -109,11 +109,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
+  const { mutate } = useSWRConfig(); // provider-scoped, so it reaches the persistent cache
   const refreshAll = React.useCallback(() => {
     mutate((key) => typeof key === "string" && key.startsWith("/api/"), undefined, {
       revalidate: true,
     });
-  }, []);
+  }, [mutate]);
 
   const value: AppState = {
     detailId,

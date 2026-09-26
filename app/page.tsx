@@ -5,5 +5,5 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const s = await getSession();
-  redirect(!s ? "/login" : s.role === "rep" ? "/rep" : "/map");
+  redirect(!s ? "/login" : s.role === "rep" ? "/rep" : "/home");
 }

@@ -54,6 +54,8 @@ function toRow(r: {
     nextFollowUp: l?.nextFollowUp?.toISOString() ?? null,
     pitchText: l?.pitchText ?? null,
     projectValue: l?.projectValue ?? null,
+    quotePackage: l?.quotePackage ?? null,
+    quoteAmount: l?.quoteAmount ?? null,
     siteStatus: s?.status ?? null,
     siteId: s?.id ?? null,
     siteSlug: s?.slug ?? null,
