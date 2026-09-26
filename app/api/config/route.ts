@@ -42,5 +42,5 @@ export async function GET() {
       contacted: Number(counts?.contacted ?? 0),
     },
     usage,
-  });
+  }, { headers: { "Cache-Control": "private, max-age=20, stale-while-revalidate=60" } });
 }

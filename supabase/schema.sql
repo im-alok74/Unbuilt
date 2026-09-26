@@ -79,6 +79,8 @@ CREATE TABLE "leads" (
 	"next_follow_up" timestamp with time zone,
 	"pitch_text" text,
 	"project_value" integer,
+	"quote_package" text,
+	"quote_amount" integer,
 	"commission_paid" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -176,3 +178,8 @@ ALTER TABLE public.push_subs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.scans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sites ENABLE ROW LEVEL SECURITY;
+
+CREATE INDEX IF NOT EXISTS "leads_assigned_stage_idx" ON "leads" USING btree ("assigned_to","stage");
+CREATE INDEX IF NOT EXISTS "leads_stage_updated_idx" ON "leads" USING btree ("stage","updated_at");
+CREATE INDEX IF NOT EXISTS "lead_requests_status_idx" ON "lead_requests" USING btree ("status");
+CREATE INDEX IF NOT EXISTS "lead_activity_lead_action_idx" ON "lead_activity" USING btree ("lead_id","action","created_at");

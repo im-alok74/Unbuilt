@@ -89,10 +89,13 @@ export const leads = pgTable("leads", {
   nextFollowUp: timestamp("next_follow_up", { withTimezone: true }),
   pitchText: text("pitch_text"),
   projectValue: integer("project_value"),
+  /** Last quote sent to the client: package id (lib/packages.ts) and the agreed-in-chat amount in INR. */
+  quotePackage: text("quote_package"),
+  quoteAmount: integer("quote_amount"),
   commissionPaid: boolean("commission_paid").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index("leads_assigned_stage_idx").on(t.assignedTo, t.stage), index("leads_stage_updated_idx").on(t.stage, t.updatedAt)]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -136,7 +139,7 @@ export const leadRequests = pgTable("lead_requests", {
   managerNote: text("manager_note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
-});
+}, (t) => [index("lead_requests_status_idx").on(t.status)]);
 
 export const dnc = pgTable("dnc", {
   id: uuid("id").primaryKey().defaultRandom(),

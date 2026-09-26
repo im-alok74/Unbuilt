@@ -36,7 +36,7 @@ function Overview() {
   const me = useMe();
   const { openDetail } = useApp();
   const { push } = useToast();
-  const { data: d, mutate } = useSWR<Dashboard>("/api/dashboard", fetcher, { refreshInterval: 60_000 });
+  const { data: d, mutate } = useSWR<Dashboard>("/api/dashboard", fetcher, { refreshInterval: 300_000 });
   if (!d) return <Spinner className="mx-auto mt-16 text-gray-300" />;
   const max = Math.max(1, ...d.funnel.map((f) => f.n));
   const byStage = Object.fromEntries(d.funnel.map((f) => [f.stage, f.n]));
@@ -194,6 +194,7 @@ function UserRow({ u, admin, onChanged }: { u: TeamUser; admin: boolean; onChang
   const [target, setTarget] = React.useState(String(u.dailyTarget));
   const [pct, setPct] = React.useState(String(u.commissionPct));
   const [pw, setPw] = React.useState("");
+  const [phone, setPhone] = React.useState(u.phone ?? "");
   async function patch(body: Record<string, unknown>, ok: string) {
     const r = await fetch(`/api/users/${u.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => null);
@@ -227,6 +228,12 @@ function UserRow({ u, admin, onChanged }: { u: TeamUser; admin: boolean; onChang
             </div>
           </Field>
         )}
+        <Field label="Phone (for WhatsApp nudges)">
+          <div className="flex gap-2">
+            <Input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="98765 43210" />
+            <Button size="sm" variant="subtle" onClick={() => patch({ phone: phone.trim() || null }, "Phone saved")}>Save</Button>
+          </div>
+        </Field>
         <Field label="Reset password">
           <div className="flex gap-2">
             <Input value={pw} onChange={(e) => setPw(e.target.value)} placeholder="New password" />
@@ -258,7 +265,7 @@ function RepsTab() {
 
 function RequestsTab() {
   const { push } = useToast();
-  const { data, mutate } = useSWR<{ requests: LeadRequest[] }>("/api/requests", fetcher, { refreshInterval: 60_000 });
+  const { data, mutate } = useSWR<{ requests: LeadRequest[] }>("/api/requests", fetcher, { refreshInterval: 300_000 });
   const [notes, setNotes] = React.useState<Record<string, string>>({});
   async function act(id: string, status: string) {
     const r = await fetch(`/api/requests/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, managerNote: notes[id] || undefined }) });
@@ -331,6 +338,11 @@ const TABS = ["Overview", "Reps", "Requests", "Do not contact"] as const;
 
 export function TeamScreen() {
   const [tab, setTab] = React.useState<(typeof TABS)[number]>("Overview");
+  React.useEffect(() => {
+    const t = new URLSearchParams(location.search).get("tab");
+    const hit = TABS.find((x) => x.toLowerCase() === (t ?? "").toLowerCase());
+    if (hit) setTab(hit);
+  }, []);
   const { data } = useSWR<Dashboard>("/api/dashboard", fetcher);
   return (
     <div className="min-h-[100dvh] px-3 pb-28 pt-[max(14px,env(safe-area-inset-top))]">

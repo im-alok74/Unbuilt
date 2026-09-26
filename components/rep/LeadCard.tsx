@@ -19,6 +19,8 @@ import { sendOrQueue } from "@/lib/offline";
 import { useToast } from "@/components/ui/toast";
 import { PitchCard } from "@/components/PitchCard";
 import { StageBadge } from "@/components/rep/LeadRow";
+import { QuoteBuilder } from "@/components/rep/QuoteBuilder";
+import { WaMessages } from "@/components/rep/WaMessages";
 import { Badge, Button, Input, ScoreBadge, Spinner, Textarea } from "@/components/ui/primitives";
 import { STAGES, STAGE_LABELS, type BusinessRow, type Stage } from "@/lib/types";
 import { toWhatsappNumber, whatsappLink, directionsLink } from "@/lib/whatsapp";
@@ -44,6 +46,7 @@ const ACTION_LABEL: Record<string, string> = {
   stage: "Stage",
   assigned: "Assigned",
   follow_up: "Follow-up set",
+  quote: "Quote sent",
 };
 
 const OUTCOMES: { log: string; label: string; stage?: Stage }[] = [
@@ -83,6 +86,7 @@ export function LeadCard() {
     if (b) {
       setNotes(b.notes);
       setFollow(b.nextFollowUp ? localInput(new Date(b.nextFollowUp)) : "");
+      setValue(b.quoteAmount ? String(b.quoteAmount) : "");
     }
   }, [b?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -96,6 +100,12 @@ export function LeadCard() {
     mutate("/api/my/summary");
     return r;
   }
+
+  const refreshAll = () => {
+    mutate(key);
+    mutate("/api/my/leads");
+    mutate("/api/my/summary");
+  };
 
   if (isLoading || !b) {
     return (
@@ -203,6 +213,9 @@ export function LeadCard() {
           <ExternalLink size={16} className="text-accent" />
         </a>
       )}
+
+      <WaMessages b={b} repName={me?.name ?? "Your Web111 contact"} onSent={refreshAll} />
+      <QuoteBuilder b={b} repName={me?.name ?? "Your Web111 contact"} onSaved={refreshAll} />
 
       <section className="card space-y-2 rounded-2xl p-3.5 shadow-card">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400">How did it go?</h2>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, List, PlusCircle, BarChart3, WifiOff } from "lucide-react";
 import { mutate } from "swr";
+import { SwrProvider } from "@/components/SwrProvider";
 import { ToastProvider, useToast } from "@/components/ui/toast";
 import { flushQueue, pendingCount } from "@/lib/offline";
 import { cn } from "@/lib/utils";
@@ -76,8 +77,8 @@ function Inner({ children }: { children: React.ReactNode }) {
 
 export function RepShell({ children }: { children: React.ReactNode }) {
   return (
-    <ToastProvider>
+    <SwrProvider><ToastProvider>
       <Inner>{children}</Inner>
-    </ToastProvider>
+    </ToastProvider></SwrProvider>
   );
 }

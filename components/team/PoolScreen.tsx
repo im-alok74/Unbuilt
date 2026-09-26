@@ -54,6 +54,14 @@ export function PoolScreen() {
     mutate();
   }, [lastScanAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Deep links from the Home screen: /pool?assigned=unassigned, ?import=1, ?add=1
+  React.useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    if (q.get("assigned")) setAssigned(q.get("assigned")!);
+    if (q.get("import")) setImportOpen(true);
+    if (q.get("add")) setAddOpen(true);
+  }, []);
+
   const allSelected = rows.length > 0 && rows.every((r) => sel.has(r.id));
   const toggle = (id: string) =>
     setSel((s) => {
@@ -100,7 +108,7 @@ export function PoolScreen() {
       <div className="mx-auto max-w-6xl">
         <header className="mb-3 flex items-center justify-between gap-2">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Lead pool</h1>
+            <h1 className="text-xl font-semibold text-gray-900">Leads</h1>
             <p className="text-xs text-gray-400">{data?.total ?? "…"} leads</p>
           </div>
           <div className="flex gap-2">

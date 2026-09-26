@@ -1,5 +1,5 @@
-// Offline shell + Web Push. Data is never cached here (SWR + the app's own offline queue handle that).
-const CACHE = "unbuilt-shell-v1";
+// Offline shell + Web Push. Page shells are cached for offline; API data is never cached here (SWR + the app's own offline queue handle that).
+const CACHE = "unbuilt-shell-v2";
 const SHELL = ["/offline", "/icon-192.png"];
 
 self.addEventListener("install", (e) => {
@@ -24,7 +24,14 @@ self.addEventListener("fetch", (e) => {
 
   // Page loads: network first; if there is no signal, show the offline page.
   if (req.mode === "navigate") {
-    e.respondWith(fetch(req).catch(() => caches.match("/offline")));
+    e.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res.ok && !res.redirected) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
+          return res;
+        })
+        .catch(() => caches.match(req).then((hit) => hit || caches.match("/offline"))),
+    );
     return;
   }
   // Built assets are content-hashed, so cache-first is safe.

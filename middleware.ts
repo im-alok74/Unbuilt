@@ -3,7 +3,7 @@ import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 
 const PUBLIC_PREFIXES = ["/login", "/api/login", "/s", "/api/health", "/api/photo", "/offline", "/api/cron"];
 // Everything a rep may touch; every other route is manager/admin only.
-const REP_PREFIXES = ["/rep", "/api/me", "/api/my", "/api/lock", "/api/push", "/api/requests"];
+const REP_PREFIXES = ["/rep", "/api/me", "/api/my", "/api/lock", "/api/push", "/api/requests", "/api/issues"];
 
 const under = (p: string, prefixes: string[]) =>
   prefixes.some((x) => p === x || p.startsWith(x + "/"));

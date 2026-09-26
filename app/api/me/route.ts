@@ -18,5 +18,5 @@ export async function GET() {
     phone: u.phone,
     commissionPct: u.commissionPct,
     dailyTarget: u.dailyTarget,
-  });
+  }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=300" } });
 }

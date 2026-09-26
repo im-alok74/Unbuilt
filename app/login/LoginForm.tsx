@@ -26,9 +26,10 @@ export function LoginForm() {
         setBusy(false);
         return;
       }
+      try { localStorage.removeItem("swr-cache"); } catch {}
       const next = new URLSearchParams(location.search).get("next");
       // Full navigation so the new cookie is sent on the first request.
-      location.replace(next && next.startsWith("/") ? next : d.role === "rep" ? "/rep" : "/map");
+      location.replace(next && next.startsWith("/") ? next : d.role === "rep" ? "/rep" : "/home");
     } catch {
       setErr("Network error.");
       setBusy(false);

@@ -26,6 +26,8 @@ export async function updateLead(
     projectValue?: number | null;
     pitchText?: string | null;
     commissionPaid?: boolean;
+    quotePackage?: string;
+    quoteAmount?: number;
   },
 ) {
   const l = await ensureLead(businessId);
@@ -43,6 +45,11 @@ export async function updateLead(
   if (patch.projectValue !== undefined) set.projectValue = patch.projectValue;
   if (patch.pitchText !== undefined) set.pitchText = patch.pitchText;
   if (patch.commissionPaid !== undefined) set.commissionPaid = patch.commissionPaid;
+  if (patch.quoteAmount !== undefined) {
+    set.quoteAmount = patch.quoteAmount;
+    set.quotePackage = patch.quotePackage ?? null;
+    await logActivity(l.id, userId, "quote", `${patch.quotePackage ?? "custom"} ₹${patch.quoteAmount.toLocaleString("en-IN")}`);
+  }
   await db.update(leads).set(set).where(eq(leads.id, l.id));
   revalidateLeadsCache();
   return l.id;
