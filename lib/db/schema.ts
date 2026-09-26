@@ -27,6 +27,7 @@ export const leadStatusEnum = pgEnum("lead_status", [
   "won",
   "lost",
 ]);
+export const userRoleEnum = pgEnum("user_role", ["admin", "manager", "rep"]);
 export const siteStatusEnum = pgEnum("site_status", ["draft", "sent", "live"]);
 export const websiteStatusEnum = pgEnum("website_status", [
   "none",
@@ -81,8 +82,77 @@ export const leads = pgTable("leads", {
     .references(() => businesses.id, { onDelete: "cascade" }),
   status: leadStatusEnum("status").notNull().default("not_contacted"),
   notes: text("notes").notNull().default(""),
+  /** Rep pipeline: new|contacted|demo_sent|quoted|negotiating|won|lost. `status` is derived from it. */
+  stage: text("stage").notNull().default("new"),
+  assignedTo: uuid("assigned_to").references(() => users.id, { onDelete: "set null" }),
+  assignedAt: timestamp("assigned_at", { withTimezone: true }),
+  nextFollowUp: timestamp("next_follow_up", { withTimezone: true }),
+  pitchText: text("pitch_text"),
+  projectValue: integer("project_value"),
+  commissionPaid: boolean("commission_paid").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  username: text("username").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  role: userRoleEnum("role").notNull().default("rep"),
+  passwordHash: text("password_hash").notNull(),
+  phone: text("phone"),
+  commissionPct: integer("commission_pct").notNull().default(10),
+  dailyTarget: integer("daily_target").notNull().default(15),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const leadActivity = pgTable(
+  "lead_activity",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    leadId: uuid("lead_id")
+      .notNull()
+      .references(() => leads.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    /** called|whatsapped|note|stage|assigned|follow_up|won|lost */
+    action: text("action").notNull(),
+    detail: text("detail"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("lead_activity_lead_idx").on(t.leadId), index("lead_activity_user_idx").on(t.userId, t.createdAt)],
+);
+
+export const leadRequests = pgTable("lead_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  requestedBy: uuid("requested_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  niche: text("niche").notNull(),
+  area: text("area"),
+  quantity: integer("quantity").notNull().default(20),
+  /** pending|approved|done|rejected */
+  status: text("status").notNull().default("pending"),
+  managerNote: text("manager_note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+});
+
+export const dnc = pgTable("dnc", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  phone: text("phone").notNull().unique(),
+  reason: text("reason"),
+  addedBy: uuid("added_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const pushSubs = pgTable("push_subs", {
+  endpoint: text("endpoint").primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
 });
 
 export const sites = pgTable("sites", {
@@ -93,6 +163,11 @@ export const sites = pgTable("sites", {
   slug: text("slug").notNull().unique(),
   template: text("template").notNull(),
   theme: text("theme").notNull().default("warm"),
+  /** Motion preset for the generated site: off | subtle | lively | cinematic. */
+  motion: text("motion").notNull().default("subtle"),
+  /** The freelancer's own short prompt describing the business, plus any
+      follow-up instructions they have added since. Fed to the copywriter. */
+  brief: text("brief").notNull().default(""),
   contentJson: jsonb("content_json").$type<SiteContent>().notNull(),
   photosJson: jsonb("photos_json").$type<SitePhoto[]>().notNull().default([]),
   quotePrice: integer("quote_price").notNull().default(2500),
@@ -136,6 +211,7 @@ export const settings = pgTable("settings", {
 
 export type BusinessRecord = typeof businesses.$inferSelect;
 export type LeadRecord = typeof leads.$inferSelect;
+export type UserRecord = typeof users.$inferSelect;
 export type SiteRecord = typeof sites.$inferSelect;
 export type ScanRecord = typeof scans.$inferSelect;
 export type SettingsRecord = typeof settings.$inferSelect;

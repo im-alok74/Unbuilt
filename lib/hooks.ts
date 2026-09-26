@@ -54,3 +54,37 @@ export function useBusiness(id: string | null) {
   );
   return { business: data?.business ?? null, error, isLoading, refresh: mutate };
 }
+
+export interface Me {
+  id: string;
+  name: string;
+  username: string;
+  role: "admin" | "manager" | "rep";
+  phone: string | null;
+  commissionPct: number;
+  dailyTarget: number;
+}
+
+export function useMe() {
+  const { data } = useSWR<Me>("/api/me", fetcher, { revalidateOnFocus: false });
+  return data;
+}
+
+export interface TeamUser {
+  id: string;
+  username: string;
+  displayName: string;
+  role: "admin" | "manager" | "rep";
+  phone: string | null;
+  commissionPct: number;
+  dailyTarget: number;
+  isActive: boolean;
+  assigned: number;
+  won: number;
+  contactsToday: number;
+}
+
+export function useTeam() {
+  const { data, mutate } = useSWR<{ users: TeamUser[] }>("/api/users", fetcher, { revalidateOnFocus: false });
+  return { users: data?.users ?? [], refresh: mutate };
+}

@@ -19,11 +19,20 @@ export interface GeneratedCopy {
 export interface CopyContext {
   business: BusinessRow;
   templateName: string;
+  /** The template's own voice hint, so the words match the layout. */
+  templateVoice?: string;
+  /**
+   * The freelancer's own prompt about this business, plus any follow-up
+   * instructions they have added. This outranks everything the Google listing
+   * says, because it comes from a human who has actually looked at the place.
+   */
+  brief?: string;
   tone?: string;
 }
 
 export function buildPrompt(ctx: CopyContext): string {
   const b = ctx.business;
+  const brief = (ctx.brief ?? "").trim();
   return [
     `You are writing website copy for a small local business that a freelance web designer is pitching a one-page site to.`,
     `Business name: ${b.name}`,
@@ -34,8 +43,21 @@ export function buildPrompt(ctx: CopyContext): string {
       ? `Hours: ${b.hours.weekdayDescriptions.join("; ")}`
       : ``,
     `Template style: ${ctx.templateName}`,
+    ctx.templateVoice ? `House voice for this template: ${ctx.templateVoice}` : ``,
     `Tone: ${ctx.tone ?? "warm, confident, plain-spoken; no hype, no exclamation-mark spam"}`,
     ``,
+    brief
+      ? [
+          `THE DESIGNER'S BRIEF — this is first-hand knowledge of the business and`,
+          `outranks anything inferred from the Google listing. Follow it closely,`,
+          `reflect its specifics in the headline, the about text and the services,`,
+          `and never contradict it:`,
+          `"""`,
+          brief.slice(0, 2000),
+          `"""`,
+          ``,
+        ].join("\n")
+      : ``,
     `Write JSON only, matching exactly this TypeScript type:`,
     `{`,
     `  "tagline": string,            // 3-6 words, sits under the business name`,
@@ -47,7 +69,10 @@ export function buildPrompt(ctx: CopyContext): string {
     `  "services": [{ "title": string, "body": string }],  // 3-4 items, body = 1 sentence`,
     `  "footerNote": string          // 1 short line, e.g. "Family-run since 2012"`,
     `}`,
-    `Do not invent specific facts (years, awards, staff names, prices). Keep it believable for a business you know little about. Output raw JSON, no markdown fences.`,
+    brief
+      ? `Facts stated in the brief are true — use them freely, including numbers, specialities and years. Do not invent facts beyond the brief and the listing.`
+      : `Do not invent specific facts (years, awards, staff names, prices). Keep it believable for a business you know little about.`,
+    `Output raw JSON, no markdown fences.`,
   ]
     .filter(Boolean)
     .join("\n");

@@ -6,12 +6,15 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const body = (await req.json().catch(() => null)) as { brief?: unknown } | null;
+  const extraBrief =
+    typeof body?.brief === "string" ? body.brief.slice(0, 2000) : undefined;
   try {
-    const site = await regenerateCopy(id);
+    const site = await regenerateCopy(id, extraBrief);
     const business = await getBusinessRow(site.businessId);
     return NextResponse.json({ site, business });
   } catch (e) {

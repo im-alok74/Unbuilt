@@ -4,6 +4,34 @@ export type LeadStatus = "not_contacted" | "quoted" | "won" | "lost";
 export type SiteStatus = "draft" | "sent" | "live";
 export type WebsiteStatus = "none" | "social" | "real" | "unknown";
 
+export type Role = "admin" | "manager" | "rep";
+export type Stage = "new" | "contacted" | "demo_sent" | "quoted" | "negotiating" | "won" | "lost";
+export const STAGES: Stage[] = ["new", "contacted", "demo_sent", "quoted", "negotiating", "won", "lost"];
+export const STAGE_LABELS: Record<Stage, string> = {
+  new: "New",
+  contacted: "Contacted",
+  demo_sent: "Demo sent",
+  quoted: "Quoted",
+  negotiating: "Negotiating",
+  won: "Won",
+  lost: "Lost",
+};
+/** Legacy lead status (map pin colour) derived from the rep pipeline stage. */
+export function stageToStatus(s: Stage): LeadStatus {
+  if (s === "won") return "won";
+  if (s === "lost") return "lost";
+  if (s === "quoted" || s === "negotiating") return "quoted";
+  return "not_contacted";
+}
+
+export interface Pitch {
+  angle: string;
+  opening: string;
+  objections: { q: string; a: string }[];
+  price: string;
+  source: "ai" | "template";
+}
+
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   not_contacted: "Not contacted",
   quoted: "Talking",
@@ -177,6 +205,12 @@ export interface BusinessRow {
   scoreBreakdown: ScoreFactor[];
   leadStatus: LeadStatus;
   notes: string;
+  stage: Stage;
+  assignedTo: string | null;
+  assignedToName: string | null;
+  nextFollowUp: string | null;
+  pitchText: string | null;
+  projectValue: number | null;
   siteStatus: SiteStatus | null;
   siteId: string | null;
   siteSlug: string | null;

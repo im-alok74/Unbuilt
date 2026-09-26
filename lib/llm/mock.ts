@@ -194,20 +194,36 @@ const GENERIC = {
   ] as [string, string][],
 };
 
+/** Split a brief into usable sentences, longest first for the headline slot. */
+function briefSentences(brief: string): string[] {
+  return brief
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((s) => s.trim().replace(/^[-*•]\s*/, ""))
+    .filter((s) => s.length > 2);
+}
+
 export function generateMockCopy(ctx: CopyContext): GeneratedCopy {
   const key = ctx.business.category ?? "";
   const base = BY_CATEGORY[key] ?? GENERIC;
   const name = ctx.business.name;
   const area = ctx.business.address?.split(",").slice(-2, -1)[0]?.trim();
+
+  // Demo mode has no model to call, but the brief should still visibly land on
+  // the page — otherwise typing one feels broken until a key is added.
+  const lines = briefSentences(ctx.brief ?? "");
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const headline = lines[0] ? cap(lines[0]).replace(/[.]$/, "") : base.headline;
+  const sub = lines.length > 1 ? lines.slice(1).join(" ") : base.sub;
+
   return {
     tagline: base.tagline,
-    heroHeadline: base.headline,
-    heroSub: base.sub,
+    heroHeadline: headline.slice(0, 120),
+    heroSub: sub.slice(0, 300),
     ctaLabel: base.cta,
     aboutTitle: "About us",
     aboutBody: `${name} is a ${
       ctx.business.categoryLabel?.toLowerCase() ?? "local business"
-    }${area ? ` in ${area}` : ""}. ${base.sub}`,
+    }${area ? ` in ${area}` : ""}. ${sub}`,
     services: base.services.map(([title, body]) => ({ title, body })),
     footerNote: ctx.business.rating
       ? `Rated ${ctx.business.rating}★ on Google`

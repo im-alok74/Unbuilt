@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { MapPin, Sparkles, LayoutGrid, User } from "lucide-react";
+import { MapPin, Sparkles, LayoutGrid, User, Users, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { key: "drop", label: "Drop", icon: MapPin, href: "/map" },
+  { key: "pool", label: "Pool", icon: ListChecks, href: "/pool" },
+  { key: "team", label: "Team", icon: Users, href: "/team" },
   { key: "build", label: "Build", icon: Sparkles, href: "/build" },
   { key: "sites", label: "Sites", icon: LayoutGrid, href: "/sites" },
   { key: "you", label: "You", icon: User, href: "/you" },
@@ -17,7 +19,7 @@ export function BottomNav() {
 
   return (
     <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] flex justify-center px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-      <div className="chrome pointer-events-auto flex w-full max-w-sm items-center justify-between rounded-full px-2 py-2 shadow-chrome">
+      <div className="chrome pointer-events-auto flex w-full max-w-md items-center justify-between rounded-full px-2 py-2 shadow-chrome">
         {ITEMS.map((it) => {
           const Icon = it.icon;
           const active =

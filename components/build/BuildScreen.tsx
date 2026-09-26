@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
-  Sparkles,
   RefreshCw,
   Eye,
   Rocket,
@@ -11,15 +10,25 @@ import {
   Check,
   ArrowLeft,
   Copy,
+  Wand2,
+  Sparkles,
 } from "lucide-react";
 import { useBusinesses } from "@/lib/hooks";
 import { useApp } from "@/components/app-context";
 import { useToast } from "@/components/ui/toast";
 import { Button, Spinner, Input, ScoreBadge } from "@/components/ui/primitives";
-import { TEMPLATES, getThemePalette } from "@/lib/templates";
+import { TEMPLATES, getTemplate, getThemePalette } from "@/lib/templates";
+import { MOTION_PRESETS, type MotionPreset } from "@/lib/motion";
 import { SiteTemplate } from "@/components/build/SiteTemplate";
+import { TemplateThumb } from "@/components/build/TemplateThumb";
 import { PhotoManager } from "@/components/build/PhotoManager";
-import { SITE_STATUS_LABELS, type SiteContent, type SitePhoto, type SiteStatus, type BusinessRow } from "@/lib/types";
+import {
+  SITE_STATUS_LABELS,
+  type SiteContent,
+  type SitePhoto,
+  type SiteStatus,
+  type BusinessRow,
+} from "@/lib/types";
 import { formatINR, cn } from "@/lib/utils";
 
 interface SiteRec {
@@ -28,6 +37,8 @@ interface SiteRec {
   slug: string;
   template: string;
   theme: string;
+  motion: MotionPreset;
+  brief: string;
   contentJson: SiteContent;
   photosJson: SitePhoto[];
   quotePrice: number;
@@ -87,6 +98,52 @@ function LeadPicker({ onPick }: { onPick: (id: string) => void }) {
   );
 }
 
+/** Short starters so the brief box never faces the user as a blank page. */
+const BRIEF_CHIPS = [
+  "Family-run for over 20 years",
+  "Best known for their biryani",
+  "Takes bookings for parties and events",
+  "Open late, popular with students",
+  "Free home delivery within 5 km",
+  "Certified staff, same-day callouts",
+];
+
+function BriefBox({
+  value,
+  onChange,
+  rows = 4,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  rows?: number;
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <textarea
+        value={value}
+        rows={rows}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2.5 text-sm leading-relaxed text-gray-900 placeholder:text-gray-400 focus:border-accent focus:outline-none"
+      />
+      <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto">
+        {BRIEF_CHIPS.map((chip) => (
+          <button
+            key={chip}
+            type="button"
+            onClick={() => onChange(value ? `${value.replace(/\s*$/, "")}\n${chip}` : chip)}
+            className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-600 hover:bg-gray-200"
+          >
+            + {chip}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function BuildForLead({
   leadId,
   isNew,
@@ -106,6 +163,8 @@ function BuildForLead({
   const [saving, setSaving] = React.useState(false);
   const [preview, setPreview] = React.useState(false);
   const [panelOpen, setPanelOpen] = React.useState(true);
+  const [brief, setBrief] = React.useState("");
+  const [refine, setRefine] = React.useState("");
   const saveTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = React.useCallback(async () => {
@@ -129,14 +188,14 @@ function BuildForLead({
       const res = await fetch("/api/sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessId: leadId, template: templateId }),
+        body: JSON.stringify({ businessId: leadId, template: templateId, brief: brief.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "failed");
       setSite(data.site);
       setBusiness(data.business);
       refreshAll();
-      push("Site drafted — AI copy filled in", "success");
+      push(brief.trim() ? "Site drafted from your brief" : "Site drafted — AI copy filled in", "success");
     } catch (e) {
       push(e instanceof Error ? e.message : "Couldn't create site", "error");
     } finally {
@@ -172,18 +231,27 @@ function BuildForLead({
     if (!site) return;
     setSite({ ...site, contentJson: { ...site.contentJson, ...p } });
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => patch({ content: { ...site.contentJson, ...p } }, { silent: true }), 700);
+    saveTimer.current = setTimeout(
+      () => patch({ content: { ...site.contentJson, ...p } }, { silent: true }),
+      700,
+    );
   }
 
-  async function regenerate() {
+  /** Regenerate the copy, optionally folding in a new instruction first. */
+  async function regenerate(extra?: string) {
     if (!site) return;
     setRegen(true);
     try {
-      const res = await fetch(`/api/sites/${site.id}/generate`, { method: "POST" });
+      const res = await fetch(`/api/sites/${site.id}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief: extra ?? "" }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "failed");
       setSite(data.site);
-      push(`Fresh copy generated`, "success");
+      setRefine("");
+      push(extra ? "Rewritten with your note" : "Fresh copy generated", "success");
     } catch (e) {
       push(e instanceof Error ? e.message : "Generation failed", "error");
     } finally {
@@ -211,11 +279,11 @@ function BuildForLead({
     return <p className="p-10 text-center text-sm text-gray-400">Lead not found.</p>;
   }
 
-  // ── Template picker ─────────────────────────────────────────────────────────
+  // ── Brief + template picker ─────────────────────────────────────────────────
   if (!site) {
     return (
       <div className="min-h-[100dvh] px-3 pb-28 pt-[max(14px,env(safe-area-inset-top))]">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto max-w-3xl">
           <button
             onClick={() => history.back()}
             className="mb-2 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-900"
@@ -223,35 +291,56 @@ function BuildForLead({
             <ArrowLeft size={13} /> Back
           </button>
           <h1 className="text-xl font-semibold text-gray-900">{business.name}</h1>
-          <p className="mb-4 text-xs text-gray-400">
-            Pick a starter template. Copy is auto-written from the Google listing
-            {isNew ? "" : ""}.
+          <p className="text-xs text-gray-400">
+            {business.categoryLabel ?? business.category}
+            {business.address ? ` · ${business.address}` : ""}
           </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {TEMPLATES.map((t) => {
-              const pal = getThemePalette(t.defaultTheme);
-              return (
-                <button
-                  key={t.id}
-                  disabled={creating !== null}
-                  onClick={() => createWithTemplate(t.id)}
-                  className="chrome overflow-hidden rounded-2xl text-left transition hover:ring-2 hover:ring-accent/50 disabled:opacity-50"
-                >
-                  <div className="flex h-20 items-center gap-2 px-4" style={{ background: pal.surface }}>
-                    <span className="h-8 w-8 rounded-full" style={{ background: pal.accent }} />
-                    <span className="h-2 flex-1 rounded-full" style={{ background: pal.border }} />
-                  </div>
-                  <div className="p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{t.name}</span>
-                      {creating === t.id && <Spinner className="h-3 w-3 text-accent" />}
-                    </div>
-                    <p className="mt-0.5 text-[11px] leading-snug text-gray-400">{t.blurb}</p>
-                  </div>
-                </button>
-              );
-            })}
+
+          <div className="chrome mt-4 rounded-2xl p-3.5">
+            <div className="mb-2 flex items-center gap-1.5">
+              <Sparkles size={14} className="text-accent" />
+              <h2 className="text-sm font-medium text-gray-900">Tell the writer about this place</h2>
+            </div>
+            <p className="mb-2.5 text-[11px] leading-relaxed text-gray-400">
+              A line or two is enough. Anything you know that Google does not — what they are
+              known for, who they serve, how long they have been around. Leave it blank and the
+              copy is written from the listing alone. You can add more later.
+            </p>
+            <BriefBox
+              value={brief}
+              onChange={setBrief}
+              placeholder={`e.g. Small family kitchen, been on this street since 2004. Famous for their mutton biryani on weekends. Mostly office lunch crowd, also takes party orders.`}
+            />
           </div>
+
+          <h2 className="mb-2 mt-5 text-sm font-medium text-gray-900">Pick a look</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                disabled={creating !== null}
+                onClick={() => createWithTemplate(t.id)}
+                className="chrome group overflow-hidden rounded-2xl text-left transition hover:ring-2 hover:ring-accent/50 disabled:opacity-50"
+              >
+                <TemplateThumb template={t} theme={t.defaultTheme} animate />
+                <div className="p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-900">{t.name}</span>
+                    <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] capitalize text-gray-500">
+                      {t.motion}
+                    </span>
+                    {creating === t.id && <Spinner className="h-3 w-3 text-accent" />}
+                  </div>
+                  <p className="mt-0.5 text-[11px] leading-snug text-gray-400">{t.blurb}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          {creating && (
+            <p className="py-4 text-center text-xs text-gray-400">
+              Writing the copy for {business.name}…
+            </p>
+          )}
         </div>
       </div>
     );
@@ -259,17 +348,19 @@ function BuildForLead({
 
   // ── Editor ─────────────────────────────────────────────────────────────────
   const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/s/${site.slug}`;
+  const tpl = getTemplate(site.template);
 
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
       <div className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2 pt-[max(8px,env(safe-area-inset-top))]">
         <button
           onClick={() => history.back()}
-          className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900"
+          className="inline-flex min-w-0 items-center gap-1 text-xs text-gray-600 hover:text-gray-900"
         >
-          <ArrowLeft size={14} /> {business.name}
+          <ArrowLeft size={14} className="shrink-0" />
+          <span className="truncate">{business.name}</span>
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {saving && <Spinner className="h-3.5 w-3.5 text-gray-400" />}
           <button
             onClick={() => setPreview(true)}
@@ -289,6 +380,7 @@ function BuildForLead({
           <SiteTemplate
             templateId={site.template}
             theme={site.theme}
+            motion={site.motion}
             content={site.contentJson}
             photos={site.photosJson}
             editable
@@ -296,7 +388,7 @@ function BuildForLead({
           />
         </div>
         <p className="py-3 text-center text-[11px] text-gray-300">
-          Click any text to edit it inline
+          Click any text to edit it. Use + Add a service to grow the page.
         </p>
       </div>
 
@@ -311,19 +403,64 @@ function BuildForLead({
         </button>
         {panelOpen && (
           <div className="max-h-[46vh] space-y-4 overflow-y-auto px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-1">
+            {/* Ask for a change in plain words */}
+            <div className="rounded-2xl bg-accent-wash/60 p-3">
+              <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-medium text-accent-deep">
+                <Wand2 size={12} /> Ask for a change
+              </p>
+              <textarea
+                value={refine}
+                rows={2}
+                placeholder="e.g. Mention the rooftop seating and that they cater weddings. Make it warmer."
+                onChange={(e) => setRefine(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && refine.trim()) {
+                    regenerate(refine.trim());
+                  }
+                }}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-accent focus:outline-none"
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => regenerate(refine.trim() || undefined)}
+                  disabled={regen}
+                >
+                  {regen ? <Spinner /> : <Wand2 size={13} />}
+                  {refine.trim() ? "Rewrite with this" : "Regenerate copy"}
+                </Button>
+                <span className="text-[10px] text-gray-400">
+                  Notes are remembered for later rewrites.
+                </span>
+              </div>
+              {site.brief && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-[10px] text-gray-400">
+                    Brief so far
+                  </summary>
+                  <p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-gray-500">
+                    {site.brief}
+                  </p>
+                </details>
+              )}
+            </div>
+
             <div>
               <p className="mb-1.5 text-[11px] font-medium text-gray-400">Template</p>
-              <div className="no-scrollbar flex gap-2 overflow-x-auto">
+              <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
                 {TEMPLATES.map((t) => (
                   <button
                     key={t.id}
                     onClick={() => patch({ template: t.id })}
                     className={cn(
-                      "shrink-0 rounded-full px-3 py-1.5 text-xs",
-                      site.template === t.id ? "bg-accent text-white" : "bg-gray-100 text-gray-600",
+                      "w-[104px] shrink-0 overflow-hidden rounded-xl border text-left",
+                      site.template === t.id
+                        ? "border-accent ring-1 ring-accent/40"
+                        : "border-gray-200",
                     )}
                   >
-                    {t.name}
+                    <TemplateThumb template={t} theme={t.defaultTheme} compact />
+                    <span className="block px-2 py-1 text-[11px] text-gray-700">{t.name}</span>
                   </button>
                 ))}
               </div>
@@ -332,7 +469,7 @@ function BuildForLead({
             <div>
               <p className="mb-1.5 text-[11px] font-medium text-gray-400">Theme</p>
               <div className="flex flex-wrap gap-2">
-                {(TEMPLATES.find((t) => t.id === site.template)?.themes ?? []).map((th) => {
+                {tpl.themes.map((th) => {
                   const pal = getThemePalette(th);
                   return (
                     <button
@@ -340,15 +477,48 @@ function BuildForLead({
                       onClick={() => patch({ theme: th })}
                       className={cn(
                         "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs capitalize",
-                        site.theme === th ? "border-accent text-gray-900" : "border-gray-200 text-gray-600",
+                        site.theme === th
+                          ? "border-accent text-gray-900"
+                          : "border-gray-200 text-gray-600",
                       )}
                     >
-                      <span className="h-3 w-3 rounded-full" style={{ background: pal.accent }} />
+                      <span
+                        className="h-3 w-3 rounded-full"
+                        style={{
+                          background: `linear-gradient(135deg, ${pal.accent}, ${pal.accent2})`,
+                        }}
+                      />
                       {th}
                     </button>
                   );
                 })}
               </div>
+            </div>
+
+            <div>
+              <p className="mb-1.5 text-[11px] font-medium text-gray-400">Motion</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {MOTION_PRESETS.map((mp) => (
+                  <button
+                    key={mp.id}
+                    onClick={() => patch({ motion: mp.id })}
+                    className={cn(
+                      "rounded-xl border px-2.5 py-2 text-left",
+                      site.motion === mp.id
+                        ? "border-accent bg-accent-wash/50"
+                        : "border-gray-200 bg-white",
+                    )}
+                  >
+                    <span className="block text-xs font-medium text-gray-900">{mp.name}</span>
+                    <span className="mt-0.5 block text-[10px] leading-snug text-gray-400">
+                      {mp.blurb}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[10px] text-gray-400">
+                Every preset switches itself off for visitors who ask for reduced motion.
+              </p>
             </div>
 
             <div>
@@ -359,8 +529,7 @@ function BuildForLead({
                   placeholder="Number with country code, e.g. 919876543210"
                   onBlur={(e) => {
                     const v = e.target.value.replace(/[^\d]/g, "");
-                    if (v !== (site.contentJson.whatsapp ?? ""))
-                      patch({ content: { whatsapp: v } });
+                    if (v !== (site.contentJson.whatsapp ?? "")) patch({ content: { whatsapp: v } });
                   }}
                 />
                 <textarea
@@ -414,7 +583,7 @@ function BuildForLead({
                 <p className="text-gray-400">Suggested invoice</p>
                 <p className="font-semibold text-gray-900">{formatINR(site.quotePrice)}</p>
               </div>
-              <Button size="sm" variant="subtle" onClick={regenerate} disabled={regen}>
+              <Button size="sm" variant="subtle" onClick={() => regenerate()} disabled={regen}>
                 {regen ? <Spinner /> : <RefreshCw size={13} />} Regenerate copy
               </Button>
             </div>
@@ -464,7 +633,7 @@ function BuildForLead({
               href={shareUrl}
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-gray-600 hover:text-gray-900"
+              className="text-xs text-gray-400 hover:text-white"
             >
               {shareUrl}
             </a>
@@ -479,6 +648,7 @@ function BuildForLead({
             <SiteTemplate
               templateId={site.template}
               theme={site.theme}
+              motion={site.motion}
               content={site.contentJson}
               photos={site.photosJson}
             />

@@ -4,11 +4,13 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Unbuilt",
   description: "Find and score local businesses that need a website.",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
   robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#F3F4F3",
+  themeColor: "#12B76A",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

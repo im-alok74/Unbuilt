@@ -9,6 +9,7 @@ export const maxDuration = 60;
 const schema = z.object({
   businessId: z.string().uuid(),
   template: z.string().min(1),
+  brief: z.string().max(2000).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -17,7 +18,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   try {
-    const site = await createSite(parsed.data.businessId, parsed.data.template);
+    const site = await createSite(
+      parsed.data.businessId,
+      parsed.data.template,
+      (parsed.data.brief ?? "").trim(),
+    );
     const business = await getBusinessRow(parsed.data.businessId);
     return NextResponse.json({ site, business });
   } catch (e) {

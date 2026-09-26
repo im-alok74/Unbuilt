@@ -1,5 +1,5 @@
 import type { BusinessRow } from "@/lib/types";
-import { LEAD_STATUS_LABELS, SITE_STATUS_LABELS } from "@/lib/types";
+import { LEAD_STATUS_LABELS, SITE_STATUS_LABELS, STAGE_LABELS } from "@/lib/types";
 
 function cell(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -21,6 +21,10 @@ export function leadsToCsv(rows: BusinessRow[]): string {
     "Phone",
     "Address",
     "Lead status",
+    "Pipeline stage",
+    "Assigned to",
+    "Next follow-up",
+    "Project value (INR)",
     "Site status",
     "Quote (INR)",
     "Notes",
@@ -42,6 +46,10 @@ export function leadsToCsv(rows: BusinessRow[]): string {
         cell(r.phone),
         cell(r.address),
         cell(LEAD_STATUS_LABELS[r.leadStatus]),
+        cell(STAGE_LABELS[r.stage]),
+        cell(r.assignedToName),
+        cell(r.nextFollowUp),
+        cell(r.projectValue),
         cell(r.siteStatus ? SITE_STATUS_LABELS[r.siteStatus] : ""),
         cell(r.quotePrice ?? ""),
         cell(r.notes),

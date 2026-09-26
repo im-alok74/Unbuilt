@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { settings } from "@/lib/db/schema";
 import { getSettingsRow } from "@/lib/settings";
+import { requireSession } from "@/lib/session";
 import { encryptSecret, decryptSecret, maskSecret, hashPin } from "@/lib/crypto";
 import { DEFAULT_PRIORITY_CATEGORIES, DEFAULT_SCORING_WEIGHTS } from "@/lib/types";
 
@@ -52,6 +53,8 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(req: NextRequest) {
+  const sess = await requireSession(["admin"]);
+  if (sess instanceof NextResponse) return sess;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

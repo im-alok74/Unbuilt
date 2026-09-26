@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { sites } from "@/lib/db/schema";
 import { getSite } from "@/lib/sites";
 import { getTemplateMeta } from "@/lib/templates";
+import { isMotionPreset } from "@/lib/motion";
 import { getBusinessRow } from "@/lib/rows";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,8 @@ const contentSchema = z.object({
 const patchSchema = z.object({
   template: z.string().optional(),
   theme: z.string().optional(),
+  motion: z.string().refine(isMotionPreset, "unknown motion preset").optional(),
+  brief: z.string().max(4000).optional(),
   content: contentSchema.partial().optional(),
   photos: z
     .array(
@@ -82,8 +85,13 @@ export async function PATCH(
     const meta = getTemplateMeta(p.template);
     set.template = meta.id;
     if (!p.theme) set.theme = meta.defaultTheme;
+    // The motion preset is part of a template's character, so adopt the new
+    // one unless the user has explicitly chosen a preset in this same request.
+    if (!p.motion) set.motion = meta.motion;
   }
   if (p.theme) set.theme = p.theme;
+  if (p.motion) set.motion = p.motion;
+  if (typeof p.brief === "string") set.brief = p.brief.trim();
   if (p.content) set.contentJson = { ...current.contentJson, ...p.content };
   if (p.photos) set.photosJson = p.photos;
   if (typeof p.quotePrice === "number") set.quotePrice = p.quotePrice;

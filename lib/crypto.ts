@@ -69,3 +69,6 @@ export function verifyPin(pin: string, stored: string | null | undefined): boole
     return false;
   }
 }
+
+export const hashPassword = hashPin;
+export const verifyPassword = verifyPin;

@@ -90,7 +90,7 @@ export function YouScreen() {
 
   async function lock() {
     await fetch("/api/lock", { method: "POST" });
-    router.push("/unlock");
+    router.push("/login");
   }
 
   if (isLoading || !data) {
@@ -315,22 +315,28 @@ export function YouScreen() {
           </p>
         </Section>
 
-        {/* PIN */}
-        <Section icon={Lock} title="App lock">
-          <Field label="Change PIN" hint="4–8 digits.">
+        {/* Password */}
+        <Section icon={Lock} title="Account">
+          <Field label="Change my password" hint="At least 6 characters.">
             <div className="flex gap-2">
               <Input
-                inputMode="numeric"
+                type="password"
                 value={newPin}
-                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ""))}
-                placeholder="New PIN"
+                onChange={(e) => setNewPin(e.target.value)}
+                placeholder="New password"
               />
               <Button
                 size="sm"
                 variant="subtle"
-                disabled={saving !== null || !/^\d{4,8}$/.test(newPin)}
+                disabled={saving !== null || newPin.length < 6}
                 onClick={async () => {
-                  if (await save({ newPin }, "PIN")) setNewPin("");
+                  const r = await fetch("/api/me/password", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ password: newPin }),
+                  });
+                  push(r.ok ? "Password updated" : "Couldn't update password", r.ok ? "success" : "error");
+                  if (r.ok) setNewPin("");
                 }}
               >
                 Update
@@ -338,7 +344,7 @@ export function YouScreen() {
             </div>
           </Field>
           <Button variant="outline" size="sm" onClick={lock}>
-            <Lock size={13} /> Lock app now
+            <Lock size={13} /> Sign out
           </Button>
         </Section>
 

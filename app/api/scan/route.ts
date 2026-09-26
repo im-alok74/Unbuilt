@@ -3,6 +3,7 @@ import { z } from "zod";
 import { runScan, estimateScan } from "@/lib/places";
 import { getBusinessRowsByIds } from "@/lib/rows";
 import { getConfig } from "@/lib/settings";
+import { requireSession, STAFF } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -23,6 +24,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const sess = await requireSession(STAFF);
+  if (sess instanceof NextResponse) return sess;
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

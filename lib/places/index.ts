@@ -1,10 +1,11 @@
 import "server-only";
-import { sql, inArray } from "drizzle-orm";
+import { sql, inArray, and, gte, between, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businesses, leads, scans } from "@/lib/db/schema";
 import { getConfig } from "@/lib/settings";
 import { scoreBusiness } from "@/lib/scoring/score";
 import type { NormalizedBusiness } from "@/lib/types";
+import { distanceMeters } from "@/lib/utils";
 import { planTiles } from "./tiles";
 import { searchTile } from "./client";
 import { mockSearch } from "./mock";
@@ -34,6 +35,38 @@ export interface ScanOutcome {
   resultCount: number;
   newCount: number;
   businessIds: string[];
+  /** True when the area was scanned recently, so no Places calls were spent. */
+  cached?: boolean;
+}
+
+const BUDGET_LIMIT = Number(process.env.PLACES_MONTHLY_LIMIT ?? 1000);
+const BUDGET_RESERVE = 100; // never spend the last 100 calls on scans
+const CACHE_DAYS = 60;
+
+export async function placesBudget() {
+  const u = await monthlyUsage();
+  const used = u.liveCalls;
+  return { limit: BUDGET_LIMIT, used, remaining: Math.max(0, BUDGET_LIMIT - used), warn: used >= BUDGET_LIMIT * 0.7, blocked: used >= BUDGET_LIMIT - BUDGET_RESERVE };
+}
+
+/** Businesses already in the DB for an area that a live scan fully covered in the last CACHE_DAYS. */
+async function cachedArea(lat: number, lng: number, radiusM: number): Promise<string[] | null> {
+  const since = new Date(Date.now() - CACHE_DAYS * 86_400_000);
+  const recent = await db
+    .select({ lat: scans.lat, lng: scans.lng, radiusM: scans.radiusM })
+    .from(scans)
+    .where(and(eq(scans.mock, false), gte(scans.ranAt, since)));
+  const covered = recent.some((r) => distanceMeters({ lat, lng }, r) + radiusM <= r.radiusM);
+  if (!covered) return null;
+  const dLat = radiusM / 111_320;
+  const dLng = radiusM / (111_320 * Math.cos((lat * Math.PI) / 180));
+  const rows = await db
+    .select({ id: businesses.id, lat: businesses.lat, lng: businesses.lng })
+    .from(businesses)
+    .where(and(between(businesses.lat, lat - dLat, lat + dLat), between(businesses.lng, lng - dLng, lng + dLng)));
+  return rows
+    .filter((r) => r.lat != null && r.lng != null && distanceMeters({ lat, lng }, { lat: r.lat!, lng: r.lng! }) <= radiusM)
+    .map((r) => r.id);
 }
 
 export async function runScan(args: ScanArgs): Promise<ScanOutcome> {
@@ -48,6 +81,10 @@ export async function runScan(args: ScanArgs): Promise<ScanOutcome> {
     : rawTypes.filter((t) => !NOT_SEARCHABLE.has(t));
 
   const mock = !cfg.hasPlacesKey;
+  if (!mock) {
+    const hit = await cachedArea(args.lat, args.lng, args.radiusM);
+    if (hit) return { mock, apiCalls: 0, resultCount: hit.length, newCount: 0, businessIds: hit, cached: true };
+  }
   const collected = new Map<string, NormalizedBusiness>();
   let apiCalls = 0;
 
@@ -55,6 +92,15 @@ export async function runScan(args: ScanArgs): Promise<ScanOutcome> {
   const workTiles = mock
     ? [{ lat: args.lat, lng: args.lng, radius: args.radiusM }]
     : tiles;
+
+  if (!mock) {
+    const b = await placesBudget();
+    if (b.used + workTiles.length > b.limit - BUDGET_RESERVE) {
+      throw new Error(
+        `Monthly Places budget: ${b.used}/${b.limit} calls used and this scan needs ${workTiles.length}. Shrink the radius or wait for next month.`,
+      );
+    }
+  }
 
   for (const tile of workTiles) {
     apiCalls++;
@@ -125,7 +171,6 @@ export async function runScan(args: ScanArgs): Promise<ScanOutcome> {
       photosJson: s.b.photos,
       score: s.score,
       scoreBreakdown: s.factors,
-      rawJson: s.b.raw as object,
       lastScannedAt: now,
     }));
 
@@ -151,7 +196,6 @@ export async function runScan(args: ScanArgs): Promise<ScanOutcome> {
       photosJson: sql`excluded.photos_json`,
       score: sql`excluded.score`,
       scoreBreakdown: sql`excluded.score_breakdown`,
-      rawJson: sql`excluded.raw_json`,
       lastScannedAt: sql`excluded.last_scanned_at`,
     };
 

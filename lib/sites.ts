@@ -40,9 +40,15 @@ function buildHighlights(b: BusinessRow): SiteHighlight[] {
 export async function buildInitialContent(
   b: BusinessRow,
   templateId: string,
+  brief = "",
 ): Promise<{ content: SiteContent; photos: SitePhoto[] }> {
   const meta = getTemplateMeta(templateId);
-  const copy = await generateSiteCopy({ business: b, templateName: meta.name });
+  const copy = await generateSiteCopy({
+    business: b,
+    templateName: meta.name,
+    templateVoice: meta.voice,
+    brief,
+  });
 
   const wa = toWhatsappNumber(b.phone);
   const content: SiteContent = {
@@ -71,6 +77,7 @@ export async function buildInitialContent(
 export async function createSite(
   businessId: string,
   templateId: string,
+  brief = "",
 ): Promise<SiteRecord> {
   const existing = await db.select().from(sites).where(eq(sites.businessId, businessId)).limit(1);
   if (existing[0]) return existing[0];
@@ -79,7 +86,7 @@ export async function createSite(
   if (!b) throw new Error("business not found");
   const cfg = await getConfig();
   const meta = getTemplateMeta(templateId);
-  const { content, photos } = await buildInitialContent(b, meta.id);
+  const { content, photos } = await buildInitialContent(b, meta.id, brief);
 
   const slug = `${slugify(b.name)}-${randomSuffix()}`;
   const quote = Math.round((cfg.defaultQuoteMin + cfg.defaultQuoteMax) / 2);
@@ -91,6 +98,8 @@ export async function createSite(
       slug,
       template: meta.id,
       theme: meta.defaultTheme,
+      motion: meta.motion,
+      brief,
       contentJson: content,
       photosJson: photos,
       quotePrice: quote,
@@ -100,14 +109,32 @@ export async function createSite(
   return inserted[0];
 }
 
-export async function regenerateCopy(siteId: string): Promise<SiteRecord> {
+/**
+ * Rewrite the copy. `extraBrief` is an additional instruction the user typed in
+ * the editor ("mention the rooftop seating"); it is appended to the stored brief
+ * so later regenerations keep remembering it.
+ */
+export async function regenerateCopy(
+  siteId: string,
+  extraBrief?: string,
+): Promise<SiteRecord> {
   const rows = await db.select().from(sites).where(eq(sites.id, siteId)).limit(1);
   const site = rows[0];
   if (!site) throw new Error("site not found");
   const b = await getBusinessRow(site.businessId);
   if (!b) throw new Error("business not found");
   const meta = getTemplateMeta(site.template);
-  const copy = await generateSiteCopy({ business: b, templateName: meta.name });
+  const brief = [site.brief, (extraBrief ?? "").trim()]
+    .filter(Boolean)
+    .join("\n")
+    .trim()
+    .slice(0, 4000);
+  const copy = await generateSiteCopy({
+    business: b,
+    templateName: meta.name,
+    templateVoice: meta.voice,
+    brief,
+  });
   const merged: SiteContent = {
     ...site.contentJson,
     tagline: copy.tagline,
@@ -121,7 +148,7 @@ export async function regenerateCopy(siteId: string): Promise<SiteRecord> {
   };
   const updated = await db
     .update(sites)
-    .set({ contentJson: merged, updatedAt: new Date() })
+    .set({ contentJson: merged, brief, updatedAt: new Date() })
     .where(eq(sites.id, siteId))
     .returning();
   return updated[0];

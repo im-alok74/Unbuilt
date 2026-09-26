@@ -17,6 +17,7 @@ import { useApp } from "@/components/app-context";
 import { useBusiness } from "@/lib/hooks";
 import { ScoreBreakdown } from "@/components/leads/ScoreBreakdown";
 import { StatusControl } from "@/components/StatusControl";
+import { AssignSection } from "@/components/team/AssignSection";
 import { Button, Badge, Spinner, Textarea } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { SITE_STATUS_LABELS } from "@/lib/types";
@@ -215,6 +216,8 @@ export function DetailPanel() {
                 )}
               </div>
             )}
+
+            <AssignSection b={b} onChanged={() => { refresh(); refreshAll(); }} />
 
             <div className="space-y-3 border-t border-gray-200 pt-4">
               <div className="grid grid-cols-2 gap-3">

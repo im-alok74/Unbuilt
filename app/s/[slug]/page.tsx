@@ -34,6 +34,7 @@ export default async function PublicSite({
       <SiteTemplate
         templateId={site.template}
         theme={site.theme}
+        motion={site.motion}
         content={site.contentJson}
         photos={site.photosJson}
       />

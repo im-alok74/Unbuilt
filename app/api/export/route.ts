@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     noWebsiteOnly: p.get("noWebsiteOnly") === "1",
     status: p.get("status")?.split(",").filter(Boolean) as LeadStatus[] | undefined,
     search: p.get("search") ?? undefined,
+    limit: 5000,
     sort: (p.get("sort") as ListFilters["sort"]) ?? undefined,
     dir: (p.get("dir") as ListFilters["dir"]) ?? undefined,
   };
