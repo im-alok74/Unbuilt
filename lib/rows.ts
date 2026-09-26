@@ -1,8 +1,11 @@
 import "server-only";
-import { eq, desc, asc, inArray, and, gte, sql, isNull, getTableColumns, type SQL } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+import { eq, asc, desc, inArray, and, or, gte, sql, isNull, getTableColumns, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businesses, leads, sites, users } from "@/lib/db/schema";
 import type { BusinessRow, LeadStatus, Stage } from "@/lib/types";
+import { getNiche } from "@/lib/niches";
+import { LEADS_LIST_TAG, NICHE_LEADS_TAG } from "@/lib/cache";
 
 // raw_json is write-only (never read) and huge; selecting it burned Neon's 5 GB egress cap.
 // Lists also skip photos/hours/score breakdown (only the detail view needs them).
@@ -71,11 +74,15 @@ export interface ListFilters {
   assignedTo?: string;
   sort?: "score" | "name" | "rating" | "reviews" | "recent";
   dir?: "asc" | "desc";
+  /** 1-based page number. Only applied when `pageSize` is also set. */
+  page?: number;
+  pageSize?: number;
+  /** Plain limit/offset alternative to page/pageSize. Without either, up to 5000 rows (map, export). */
   limit?: number;
   offset?: number;
 }
 
-function whereFor(filters: ListFilters): SQL | undefined {
+function buildConds(filters: ListFilters): SQL[] {
   const conds: SQL[] = [];
   if (typeof filters.minScore === "number" && filters.minScore > 0) {
     conds.push(gte(businesses.score, filters.minScore));
@@ -97,40 +104,127 @@ function whereFor(filters: ListFilters): SQL | undefined {
   if (filters.search && filters.search.trim()) {
     conds.push(sql`${businesses.name} ilike ${"%" + filters.search.trim() + "%"}`);
   }
-  return conds.length ? and(...conds) : undefined;
+  return conds;
+}
+
+function orderExprs(sort: ListFilters["sort"], dir: ListFilters["dir"]) {
+  const dirFn = dir === "asc" ? asc : desc;
+  switch (sort) {
+    case "name":
+      return [dirFn(businesses.name)];
+    case "rating":
+      return [dirFn(sql`coalesce(${businesses.rating}, 0)`)];
+    case "reviews":
+      return [dirFn(businesses.reviewCount)];
+    case "recent":
+      return [dirFn(businesses.lastScannedAt)];
+    default:
+      return [dirFn(businesses.score), dirFn(businesses.reviewCount)];
+  }
+}
+
+function listQuery(f: ListFilters) {
+  const win = f.pageSize
+    ? { limit: Math.min(f.pageSize, 5000), offset: (Math.max(1, f.page ?? 1) - 1) * f.pageSize }
+    : { limit: Math.min(f.limit ?? 5000, 5000), offset: f.offset ?? 0 };
+  return { conds: buildConds(f), order: orderExprs(f.sort ?? "score", f.dir ?? "desc"), ...win };
 }
 
 export async function listBusinessRows(filters: ListFilters = {}): Promise<BusinessRow[]> {
-  const dir = filters.dir ?? "desc";
-  const d = dir === "asc" ? asc : desc;
-  const col = {
-    name: businesses.name,
-    rating: businesses.rating,
-    reviews: businesses.reviewCount,
-    recent: businesses.lastScannedAt,
-    score: businesses.score,
-  }[filters.sort ?? "score"];
+  const { conds, limit, offset, order } = listQuery(filters);
   const rows = await db
     .select(selSlim)
     .from(businesses)
     .leftJoin(leads, eq(leads.businessId, businesses.id))
     .leftJoin(sites, eq(sites.businessId, businesses.id))
     .leftJoin(users, eq(users.id, leads.assignedTo))
-    .where(whereFor(filters))
-    .orderBy(d(col), desc(businesses.reviewCount))
-    .limit(Math.min(filters.limit ?? 2000, 5000))
-    .offset(filters.offset ?? 0);
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(...order)
+    .limit(limit)
+    .offset(offset);
   return rows.map(toRow);
 }
 
+/** Total rows matching `filters`, ignoring paging. */
 export async function countBusinessRows(filters: ListFilters = {}): Promise<number> {
-  const [r] = await db
-    .select({ n: sql<number>`count(*)` })
+  const conds = buildConds(filters);
+  const result = await db
+    .select({ count: sql<number>`count(*)`.mapWith(Number) })
     .from(businesses)
     .leftJoin(leads, eq(leads.businessId, businesses.id))
-    .where(whereFor(filters));
-  return Number(r?.n ?? 0);
+    .where(conds.length ? and(...conds) : undefined);
+  return result[0]?.count ?? 0;
 }
+
+/** A page plus the matching total in one round trip (`count(*) over()`). */
+async function listBusinessRowsPagedUncached(filters: ListFilters = {}): Promise<{ rows: BusinessRow[]; total: number }> {
+  const { conds, limit, offset, order } = listQuery(filters);
+  const results = await db
+    .select({ ...selSlim, total: sql<number>`count(*) over()`.mapWith(Number) })
+    .from(businesses)
+    .leftJoin(leads, eq(leads.businessId, businesses.id))
+    .leftJoin(sites, eq(sites.businessId, businesses.id))
+    .leftJoin(users, eq(users.id, leads.assignedTo))
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(...order)
+    .limit(limit)
+    .offset(offset);
+  if (results.length === 0) {
+    // Truly no matches, or the page is past the end.
+    return { rows: [], total: await countBusinessRows(filters) };
+  }
+  return { rows: results.map(toRow), total: results[0].total };
+}
+
+/**
+ * Cached for a short window so repeat loads / SWR revalidation with the same filters skip Postgres,
+ * the main lever for keeping database egress low. Every write path calls revalidateLeadsCache().
+ */
+export const listBusinessRowsPaged = unstable_cache(listBusinessRowsPagedUncached, ["businesses-list-paged"], {
+  revalidate: 30,
+  tags: [LEADS_LIST_TAG],
+});
+
+/**
+ * Leads for a "download by niche" preset (lib/niches.ts): always businesses with no real website,
+ * optionally gated to a rating/review quality bar.
+ */
+async function listNicheLeadsUncached(nicheId: string): Promise<BusinessRow[]> {
+  const niche = getNiche(nicheId);
+  if (!niche) return [];
+
+  const matchConds: SQL[] = [];
+  if (niche.types.length) {
+    matchConds.push(inArray(businesses.category, niche.types), sql`${businesses.types} ?| array[${sql.join(niche.types.map((t) => sql`${t}`), sql`, `)}]::text[]`);
+  }
+  if (niche.keywords?.length) {
+    // `\y` is Postgres's word-boundary escape (not `\b`, which ARE regex treats as a literal backspace),
+    // which keeps "ngo" from matching "Bingo".
+    const pattern = `\\y(${niche.keywords.join("|")})\\y`;
+    matchConds.push(sql`(${businesses.name} ~* ${pattern} OR ${businesses.categoryLabel} ~* ${pattern})`);
+  }
+
+  const conds: SQL[] = [inArray(businesses.websiteStatus, ["none", "social"]), or(...matchConds)!];
+  if (niche.qualityFilter) {
+    conds.push(sql`${businesses.rating} >= 4.0 AND ${businesses.reviewCount} >= 10`);
+  }
+
+  const rows = await db
+    .select(selSlim)
+    .from(businesses)
+    .leftJoin(leads, eq(leads.businessId, businesses.id))
+    .leftJoin(sites, eq(sites.businessId, businesses.id))
+    .leftJoin(users, eq(users.id, leads.assignedTo))
+    .where(and(...conds))
+    .orderBy(desc(businesses.score), desc(businesses.reviewCount));
+
+  return rows.map(toRow);
+}
+
+export const listNicheLeads = unstable_cache(listNicheLeadsUncached, ["niche-leads"], {
+  revalidate: 120,
+  tags: [NICHE_LEADS_TAG],
+});
 
 export async function getBusinessRow(id: string): Promise<BusinessRow | null> {
   const rows = await db

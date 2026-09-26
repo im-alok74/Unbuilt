@@ -1,7 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Search, SlidersHorizontal, Download, ArrowUpDown, ExternalLink } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  Download,
+  ArrowUpDown,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Tag,
+} from "lucide-react";
 import { useBusinesses } from "@/lib/hooks";
 import { useApp, filtersToQuery, activeFilterCount } from "@/components/app-context";
 import { useToast } from "@/components/ui/toast";
@@ -9,20 +18,55 @@ import { FilterSheet } from "@/components/FilterSheet";
 import { StatusControl } from "@/components/StatusControl";
 import { ScoreBadge, Badge } from "@/components/ui/primitives";
 import { SITE_STATUS_LABELS } from "@/lib/types";
+import { NICHES } from "@/lib/niches";
 import { formatINR, cn } from "@/lib/utils";
 
 type SortKey = "score" | "name" | "rating" | "reviews" | "recent";
 
+const PAGE_SIZE = 50;
+
 export function LeadsScreen() {
   const { filters, setFilters, openDetail, lastScanAt } = useApp();
   const { push } = useToast();
-  const query = filtersToQuery(filters);
-  const { businesses, isLoading, refresh } = useBusinesses(query);
+  const [page, setPage] = React.useState(1);
+
+  // Local, instant input state; only pushed into `filters` (and so into the
+  // DB query) after the user pauses typing, instead of on every keystroke.
+  const [searchInput, setSearchInput] = React.useState(filters.search);
+  React.useEffect(() => {
+    setSearchInput(filters.search);
+  }, [filters.search]);
+  React.useEffect(() => {
+    if (searchInput === filters.search) return;
+    const t = setTimeout(() => {
+      setFilters((f) => ({ ...f, search: searchInput }));
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
+  const baseQuery = filtersToQuery(filters);
+  const query = `${baseQuery ? baseQuery + "&" : ""}page=${page}&pageSize=${PAGE_SIZE}`;
+  const { businesses, total, isLoading, refresh } = useBusinesses(query);
   const [filterOpen, setFilterOpen] = React.useState(false);
 
   React.useEffect(() => {
     refresh();
   }, [lastScanAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Any change to filters/sort invalidates the current page's result set.
+  React.useEffect(() => {
+    setPage(1);
+  }, [baseQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
+
+  // A mutation (e.g. status change) can shrink the filtered total out from under the current page.
+  React.useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
   const nFilters = activeFilterCount(filters);
 
@@ -35,8 +79,17 @@ export function LeadsScreen() {
   }
 
   function exportCsv() {
-    window.location.href = `/api/export?${query}`;
+    // Export always covers the full filtered list, not just the current page.
+    window.location.href = `/api/export?${baseQuery}`;
     push("Exporting current list…", "success");
+  }
+
+  const [nicheMenuOpen, setNicheMenuOpen] = React.useState(false);
+
+  function downloadNiche(nicheId: string, label: string) {
+    window.location.href = `/api/export?niche=${nicheId}`;
+    push(`Exporting ${label} leads with no website…`, "success");
+    setNicheMenuOpen(false);
   }
 
   const cols: { key: SortKey; label: string }[] = [
@@ -53,8 +106,9 @@ export function LeadsScreen() {
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Sites</h1>
             <p className="text-xs text-gray-400">
-              {businesses.length} {businesses.length === 1 ? "business" : "businesses"}
+              {total} {total === 1 ? "business" : "businesses"}
               {nFilters > 0 && " · filtered"}
+              {total > 0 && ` · showing ${rangeStart}–${rangeEnd}`}
             </p>
           </div>
           <div className="flex gap-2">
@@ -72,17 +126,60 @@ export function LeadsScreen() {
             <button
               onClick={exportCsv}
               className="chrome grid h-10 w-10 place-items-center rounded-full text-accent"
+              title="Download current list"
             >
               <Download size={16} />
             </button>
+            <div className="relative">
+              <button
+                onClick={() => setNicheMenuOpen((o) => !o)}
+                className="chrome grid h-10 w-10 place-items-center rounded-full text-accent"
+                title="Download by niche (no website)"
+                aria-haspopup="menu"
+                aria-expanded={nicheMenuOpen}
+                aria-controls="niche-download-menu"
+              >
+                <Tag size={16} />
+              </button>
+              {nicheMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setNicheMenuOpen(false)}
+                  />
+                  <div
+                    id="niche-download-menu"
+                    role="menu"
+                    className="chrome absolute right-0 top-12 z-50 w-64 rounded-2xl p-2 shadow-chrome"
+                  >
+                    <p className="px-2 pb-1.5 pt-1 text-[11px] font-medium text-gray-400">
+                      Download by niche · no website only
+                    </p>
+                    {NICHES.map((n) => (
+                      <button
+                        key={n.id}
+                        role="menuitem"
+                        onClick={() => downloadNiche(n.id, n.label)}
+                        className="flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        {n.label}
+                        {n.qualityFilter && (
+                          <span className="text-[10px] text-gray-400">4★+</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
 
         <div className="chrome mb-3 flex h-11 items-center rounded-full px-4">
           <Search size={16} className="mr-2 text-gray-400" />
           <input
-            value={filters.search}
-            onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search leads by name"
             className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
           />
@@ -219,6 +316,30 @@ export function LeadsScreen() {
                 </button>
               ))}
             </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4 flex items-center justify-between">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="chrome flex h-9 items-center gap-1 rounded-full px-3 text-xs font-medium text-gray-600 disabled:opacity-40"
+                >
+                  <ChevronLeft size={14} />
+                  Prev
+                </button>
+                <span className="text-xs text-gray-400">
+                  Page {page} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="chrome flex h-9 items-center gap-1 rounded-full px-3 text-xs font-medium text-gray-600 disabled:opacity-40"
+                >
+                  Next
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

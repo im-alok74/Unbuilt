@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createSite } from "@/lib/sites";
 import { getBusinessRow } from "@/lib/rows";
+import { revalidateLeadsCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
       parsed.data.template,
       (parsed.data.brief ?? "").trim(),
     );
+    revalidateLeadsCache();
     const business = await getBusinessRow(parsed.data.businessId);
     return NextResponse.json({ site, business });
   } catch (e) {

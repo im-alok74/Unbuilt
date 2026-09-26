@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { leads, leadActivity } from "@/lib/db/schema";
 import { stageToStatus, type Stage } from "@/lib/types";
+import { revalidateLeadsCache } from "@/lib/cache";
 
 export async function ensureLead(businessId: string) {
   await db.insert(leads).values({ businessId }).onConflictDoNothing();
@@ -43,5 +44,6 @@ export async function updateLead(
   if (patch.pitchText !== undefined) set.pitchText = patch.pitchText;
   if (patch.commissionPaid !== undefined) set.commissionPaid = patch.commissionPaid;
   await db.update(leads).set(set).where(eq(leads.id, l.id));
+  revalidateLeadsCache();
   return l.id;
 }

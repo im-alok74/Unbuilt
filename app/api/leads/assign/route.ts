@@ -6,6 +6,7 @@ import { businesses, leads, leadActivity, users, dnc } from "@/lib/db/schema";
 import { requireSession, STAFF } from "@/lib/session";
 import { normPhoneSql } from "@/lib/phone";
 import { notifyUser } from "@/lib/push";
+import { revalidateLeadsCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
       .update(leads)
       .set({ assignedTo: null, assignedAt: null, updatedAt: new Date() })
       .where(inArray(leads.businessId, businessIds));
+    revalidateLeadsCache();
     return NextResponse.json({ assigned: 0, unassigned: businessIds.length });
   }
 
@@ -109,5 +111,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  revalidateLeadsCache();
   return NextResponse.json({ assigned: rows.length, skippedDnc, conflicts });
 }

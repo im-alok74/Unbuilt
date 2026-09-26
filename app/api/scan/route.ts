@@ -4,6 +4,7 @@ import { runScan, estimateScan } from "@/lib/places";
 import { getBusinessRowsByIds } from "@/lib/rows";
 import { getConfig } from "@/lib/settings";
 import { requireSession, STAFF } from "@/lib/session";
+import { revalidateLeadsCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const outcome = await runScan(parsed.data);
+    revalidateLeadsCache();
     const rows = await getBusinessRowsByIds(outcome.businessIds);
     return NextResponse.json({
       ...outcome,

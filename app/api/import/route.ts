@@ -8,6 +8,7 @@ import { requireSession, STAFF } from "@/lib/session";
 import { normPhone, normPhoneSql } from "@/lib/phone";
 import { classifyWebsite, scoreBusiness } from "@/lib/scoring/score";
 import { getConfig } from "@/lib/settings";
+import { revalidateLeadsCache } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -97,5 +98,6 @@ export async function POST(req: NextRequest) {
       .onConflictDoNothing();
   }
 
+  revalidateLeadsCache();
   return NextResponse.json({ imported: ids.length, businessIds: ids, skipped });
 }

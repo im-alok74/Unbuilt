@@ -10,7 +10,7 @@ for the ones you close.
 ## Stack
 
 - Next.js 15 (App Router) + TypeScript + Tailwind
-- Postgres on Neon (`drizzle-orm`, `drizzle-kit`)
+- Postgres on Supabase (`drizzle-orm`, `drizzle-kit`, `postgres` / postgres-js)
 - Mapbox GL JS for the map (falls back to a schematic map with no token)
 - Google Places API (New) — Nearby Search, field-masked to the Enterprise SKU
 - Gemini (free tier) for site copy, behind a provider interface
@@ -32,7 +32,8 @@ no PIN in the DB, the unlock screen lets you set one.
 
 | Var | Required | Notes |
 |-----|----------|-------|
-| `DATABASE_URL` | yes | Neon pooled connection string |
+| `DATABASE_URL` | yes | Supabase pooled (Supavisor transaction, port 6543) connection string |
+| `DATABASE_CA_CERT` | no | pooler's CA cert (PEM) for full TLS verification; without it the connection is encrypted but not identity-verified |
 | `ENCRYPTION_KEY` | yes | 32-byte base64 — encrypts API keys stored in the DB |
 | `AUTH_SECRET` | yes | 32-byte base64 — signs the session cookie |
 | `APP_PIN` | no | first-run PIN; ignored once a PIN is set in the You tab |
