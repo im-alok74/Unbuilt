@@ -866,8 +866,9 @@ Other additions: DB-checked sessions (deactivating a user logs them out on their
    - `ADMIN_USERNAME`, `ADMIN_PASSWORD` (if unset, the admin is `admin` with the old `APP_PIN` as password; change it in You → Account straight away)
    - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
    - `CRON_SECRET`
-   - existing: `DATABASE_URL`, `ENCRYPTION_KEY`, `AUTH_SECRET`, `NEXT_PUBLIC_MAPBOX_TOKEN`, `GOOGLE_PLACES_API_KEY`, `GEMINI_API_KEY`
-3. **Schema.** Run `supabase/schema.sql` in the Supabase SQL Editor (section 33).
+   - `DATABASE_URL` = the Supabase pooler string from `.env.local` (replaces the Neon one)
+   - existing: `ENCRYPTION_KEY`, `AUTH_SECRET`, `NEXT_PUBLIC_MAPBOX_TOKEN`, `GOOGLE_PLACES_API_KEY`, `GEMINI_API_KEY`
+3. **Schema.** Already applied to Supabase (section 33). Nothing to run.
 4. **Deploy** (push the branch, merge to `main`; Vercel auto-deploys).
 5. **First login** at `/login` as the admin. Add the manager (Team → Reps → role Manager), then the manager adds reps and shares username + password with each.
 6. **Google Cloud.** In the Places API quotas page set a per-day cap of about 35 requests. That makes overspend physically impossible even if the app has a bug.
@@ -891,10 +892,10 @@ Other additions: DB-checked sessions (deactivating a user logs them out on their
 
 - Project **unbuilt**, ref `ftsrfnkiiewkturuqgiu`, Singapore. Old scan data on Neon was not migrated.
 - The app uses `pg` (node-postgres) through Drizzle in `lib/db/index.ts`, one connection per serverless instance, TLS certificate verification on. Any Postgres URL works (Supabase, Neon, local).
-- **Setup, once:**
-  1. Supabase Dashboard -> SQL Editor -> paste `supabase/schema.sql` -> Run. It replaces the five empty starter tables with the full schema and turns Row Level Security on for every table (the app's server connection bypasses RLS; the public API keys are locked out).
-  2. Dashboard -> Connect -> **Transaction pooler** connection string (port 6543, host `...pooler.supabase.com`). Put it in `DATABASE_URL` in Vercel and `.env.local`, replacing the Neon URL.
-  3. If the app cannot connect with a certificate error, download the Supabase root CA (Dashboard -> Database -> Settings -> SSL Configuration) and put its PEM text in an env var `DATABASE_CA`.
+- **Status:** schema applied (RLS on for all 10 tables), connection tested, full flow tested (login, users, import, assign, rep updates, dashboard). Database is fresh: one admin user, nothing else.
+- **Connection:** `DATABASE_URL` must be the **Transaction pooler** string, `postgresql://postgres.<ref>:<password>@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres`. The direct host `db.<ref>.supabase.co` is IPv6-only on the free plan and does not work from Vercel or most home networks.
+- **TLS:** Supabase's certificate authority is not in Node's default trust store, so its public root certificate is bundled in `lib/db/supabase-ca.ts` (copy in `supabase/prod-ca-2021.crt`, expires 2031-04-26) and verification stays on. `DATABASE_CA` overrides it.
+- **Admin login:** `ADMIN_USERNAME` / `ADMIN_PASSWORD` in `.env.local` (the admin already exists in the database; the env vars only matter on a brand-new empty database).
 - Later schema changes: edit `lib/db/schema.ts`, then `npx drizzle-kit push` (use the **direct** connection string, port 5432, for that command only).
 - Free-tier watch-outs: 5 GB egress a month (the slim list queries exist for this), and the project pauses after 7 days without activity. The daily cron digest keeps it awake.
 

@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
+import { SUPABASE_CA } from "./supabase-ca";
 
 let _db: NodePgDatabase<typeof schema> | null = null;
 
@@ -22,8 +23,10 @@ function getDb(): NodePgDatabase<typeof schema> {
     connectionString: u.toString(),
     max: 1,
     idleTimeoutMillis: 10_000,
-    // Certificate verification stays on. If the provider's CA isn't publicly trusted (Supabase), set DATABASE_CA to its PEM.
-    ssl: /localhost|127\.0\.0\.1/.test(url) ? undefined : process.env.DATABASE_CA ? { ca: process.env.DATABASE_CA } : true,
+    // Certificate verification stays on. Supabase's CA isn't publicly trusted, so it is bundled; DATABASE_CA overrides it.
+    ssl: /localhost|127\.0\.0\.1/.test(url)
+      ? undefined
+      : { ca: process.env.DATABASE_CA || (u.hostname.endsWith("supabase.com") || u.hostname.endsWith("supabase.co") ? SUPABASE_CA : undefined) },
   });
   _db = drizzle(pool, { schema });
   return _db;
