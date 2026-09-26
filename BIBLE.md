@@ -728,8 +728,8 @@ Legend: [x] built and tested locally, [~] built with a known limit, [ ] not buil
 - [x] `manifest.webmanifest`, icons (192, 512, maskable), `sw.js` (offline shell + push), `/offline`
 - [x] Web Push (VAPID): new leads, request updates, deal won, lead request; daily digest by Vercel Cron
 - [~] Offline: updates made with no signal are queued in localStorage and replayed on reconnect (no Background Sync API)
-- [ ] Build the TWA APK (your step, see section 31)
-- [~] `public/.well-known/assetlinks.json` is a placeholder until the APK is signed
+- [x] TWA APK built and signed (section 31, step 7)
+- [x] `public/.well-known/assetlinks.json` carries the APK signing fingerprint
 
 ### Phase 6: Polish
 - [x] Website audit: PageSpeed score is pulled into the pitch for leads that have a real site
@@ -872,11 +872,9 @@ Other additions: DB-checked sessions (deactivating a user logs them out on their
 4. **Deploy** (push the branch, merge to `main`; Vercel auto-deploys).
 5. **First login** at `/login` as the admin. Add the manager (Team → Reps → role Manager), then the manager adds reps and shares username + password with each.
 6. **Google Cloud.** In the Places API quotas page set a per-day cap of about 35 requests. That makes overspend physically impossible even if the app has a bug.
-7. **Build the APK** (needs the site live over HTTPS):
-   1. Open pwabuilder.com, enter the site URL, Package for stores, Android.
-   2. Package ID `com.unbuilt.sales`, let it generate a signing key (keep the `.keystore` and passwords safe, you need them for every update).
-   3. Copy the **SHA-256 fingerprint** it shows and put it into `public/.well-known/assetlinks.json` (replace `REPLACE_WITH_SHA256_FROM_YOUR_SIGNING_KEY`), redeploy. Without this the app shows a browser URL bar.
-   4. Send the `.apk` to reps on WhatsApp or Drive. They allow "install unknown apps" once. Updates ship by deploying the site, the APK does not need reissuing.
+7. **APK: built 2026-09-26.** File: `A:/All projects/unbuilt-apk/unbuilt-sales.apk` (1 MB, package `com.unbuilt.sales`, signed, SHA-256 in `public/.well-known/assetlinks.json` and live on the site). Send it to reps on WhatsApp/Drive; they allow "install unknown apps" once. It loads the live site, so site updates reach everyone without a new APK.
+   - **Keep `A:/All projects/unbuilt-apk/` safe** (never commit it). `android.keystore` + `keystore-info.txt` (password) are the app's identity: lose them and installed apps can never be updated, only replaced.
+   - **Rebuild** (only needed to change the icon, name or package): edit `twa-manifest.json` there, run `npx @bubblewrap/cli update --skipVersionUpgrade`, bump `appVersionCode`, then with `JAVA_HOME` = JDK 21 and `ANDROID_HOME` set run `gradlew.bat assembleRelease`, `zipalign -p 4`, and `apksigner sign` with the keystore. (Bubblewrap's own `build` rejects this SDK layout and its Windows JDK auto-install is broken, so Gradle is run directly.)
 8. **Reps' first run:** open the app, sign in, tap Turn on on the notifications card.
 
 ## 32. Day-to-Day Operating Guide
