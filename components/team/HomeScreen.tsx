@@ -98,9 +98,18 @@ function nudgeLink(phone: string | null, text: string) {
 
 export function HomeScreen() {
   const me = useMe();
-  const { data: d } = useSWR<Home>("/api/dashboard", fetcher, { refreshInterval: 300_000 });
+  const { data: d, error, mutate } = useSWR<Home>("/api/dashboard", fetcher, { refreshInterval: 300_000 });
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  if (error && !d) {
+    return (
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 text-sm text-gray-500">
+        Could not load the dashboard.
+        <button className="rounded-xl bg-gray-900 px-4 py-2 text-white" onClick={() => mutate()}>Retry</button>
+      </div>
+    );
+  }
 
   if (!d) {
     return (

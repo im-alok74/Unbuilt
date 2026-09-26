@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import useSWR, { mutate } from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import {
   ArrowLeft,
   Phone,
@@ -73,6 +73,7 @@ export function LeadCard() {
   const { id } = useParams<{ id: string }>();
   const me = useMe();
   const { push } = useToast();
+  const { mutate } = useSWRConfig();
   const key = `/api/my/leads/${id}`;
   const { data, isLoading } = useSWR<{ business: BusinessRow; activity: Activity[] }>(key, fetcher);
   const b = data?.business;
@@ -86,7 +87,7 @@ export function LeadCard() {
     if (b) {
       setNotes(b.notes);
       setFollow(b.nextFollowUp ? localInput(new Date(b.nextFollowUp)) : "");
-      setValue(b.quoteAmount ? String(b.quoteAmount) : "");
+      setValue(b.projectValue ? String(b.projectValue) : b.quoteAmount ? String(b.quoteAmount) : "");
     }
   }, [b?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 

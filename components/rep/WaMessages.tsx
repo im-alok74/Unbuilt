@@ -19,7 +19,8 @@ export function WaMessages({ b, repName, onSent }: { b: BusinessRow; repName: st
   async function send(id: string, text: string) {
     if (!wa) return;
     window.open(whatsappLink(wa, text), "_blank", "noopener");
-    await sendOrQueue(`/api/my/leads/${b.id}`, "PATCH", { log: { action: "whatsapped", detail: list.find((t) => t.id === id)?.label } });
+    const r = await sendOrQueue(`/api/my/leads/${b.id}`, "PATCH", { log: { action: "whatsapped", detail: list.find((t) => t.id === id)?.label } });
+    if (r === "rejected") return alert("WhatsApp opened, but the activity could not be saved. Please log it manually.");
     onSent();
   }
 
