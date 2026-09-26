@@ -4,7 +4,7 @@
     "target": {
       "namespace": "android_app",
       "package_name": "com.unbuilt.sales",
-      "sha256_cert_fingerprints": ["REPLACE_WITH_SHA256_FROM_YOUR_SIGNING_KEY"]
+      "sha256_cert_fingerprints": ["7C:E0:CC:2B:A2:D3:7F:CF:97:37:B5:A6:46:DE:C7:46:8C:46:09:64:63:DD:ED:03:6C:45:14:66:A1:C9:5A:68"]
     }
   }
 ]
