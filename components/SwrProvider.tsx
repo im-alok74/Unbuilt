@@ -6,6 +6,7 @@ import { SWRConfig } from "swr";
 // Repeat opens within 60s do not hit the DB; writes call mutate(), so edits still show at once.
 function provider() {
   let map = new Map<string, unknown>();
+  if (typeof window === "undefined") return map as Map<string, never>; // server prerender
   try {
     map = new Map(JSON.parse(localStorage.getItem("swr-cache") || "[]"));
   } catch {}
