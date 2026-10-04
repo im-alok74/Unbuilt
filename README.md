@@ -47,6 +47,12 @@ Generate the two secrets:
 node -e "console.log('ENCRYPTION_KEY='+require('crypto').randomBytes(32).toString('base64'));console.log('AUTH_SECRET='+require('crypto').randomBytes(32).toString('base64'))"
 ```
 
+## Security notes
+
+- Unset `ADMIN_PASSWORD` (and `APP_PIN`) after the first admin login; it only bootstraps the first account.
+- `APP_TZ` (default `Asia/Kolkata`) sets the day boundary for the daily digest; use an IANA name.
+- Changing a password signs that user out everywhere else; sessions last 14 days.
+
 ## Without keys
 
 The app runs fully in **demo mode** until you add keys in the **You** tab:

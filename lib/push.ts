@@ -4,6 +4,23 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { pushSubs, users } from "@/lib/db/schema";
 
+const PUSH_HOSTS = ["fcm.googleapis.com", "updates.push.services.mozilla.com", "web.push.apple.com"];
+const PUSH_SUFFIXES = [".push.apple.com", ".notify.windows.com"];
+
+/** https only, and only the browsers' push services, so subscriptions can't be used for SSRF. */
+export function isPushEndpoint(endpoint: string): boolean {
+  try {
+    const u = new URL(endpoint);
+    return (
+      u.protocol === "https:" &&
+      !u.port &&
+      (PUSH_HOSTS.includes(u.hostname) || PUSH_SUFFIXES.some((s) => u.hostname.endsWith(s)))
+    );
+  } catch {
+    return false;
+  }
+}
+
 let ready: boolean | null = null;
 function init(): boolean {
   if (ready !== null) return ready;
@@ -21,6 +38,7 @@ export async function notifyUser(userId: string, msg: { title: string; body: str
     const subs = await db.select().from(pushSubs).where(eq(pushSubs.userId, userId));
     await Promise.all(
       subs.map(async (s) => {
+        if (!isPushEndpoint(s.endpoint)) return;
         try {
           await webpush.sendNotification(
             { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },

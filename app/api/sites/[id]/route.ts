@@ -1,3 +1,4 @@
+import { requireSession, STAFF } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -15,6 +16,8 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const _auth = await requireSession(STAFF);
+  if (_auth instanceof NextResponse) return _auth;
   const { id } = await params;
   const site = await getSite(id);
   if (!site) return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -40,7 +43,7 @@ const contentSchema = z.object({
   phone: z.string().max(60),
   whatsapp: z.string().max(20),
   whatsappMessage: z.string().max(400),
-  mapLink: z.string().max(500),
+  mapLink: z.string().max(500).refine((u) => !u || /^https?:\/\//i.test(u), "Map link must start with http(s)://"),
   footerNote: z.string().max(200),
 });
 
@@ -68,6 +71,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const _auth = await requireSession(STAFF);
+  if (_auth instanceof NextResponse) return _auth;
   const { id } = await params;
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

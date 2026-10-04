@@ -1,16 +1,26 @@
-/** Normalise a phone string to bare international digits for wa.me links. */
-export function toWhatsappNumber(
-  phone: string | null | undefined,
-  defaultCountryCode = "91",
-): string {
+import { countryCodeFor } from "@/lib/area";
+
+/**
+ * Normalise a phone string to bare international digits for wa.me links.
+ * "+971 50 123 4567" / "00971…" are used as typed; local numbers get the country code of `place`
+ * (the lead's area/address text), or +91.
+ */
+export function toWhatsappNumber(phone: string | null | undefined, place?: string | null): string {
   if (!phone) return "";
-  let d = phone.replace(/[^\d]/g, "");
+  const d = phone.replace(/[^\d]/g, "");
   if (!d) return "";
-  // 0-prefixed local → replace leading 0 with country code
-  if (d.startsWith("0")) d = defaultCountryCode + d.slice(1);
-  // bare 10-digit local (India) → prepend country code
-  if (d.length === 10) d = defaultCountryCode + d;
+  const cc = countryCodeFor(place);
+  if (phone.trim().startsWith("+")) return d;
+  if (d.startsWith("00")) return d.slice(2);
+  if (d.startsWith("0")) return cc + d.slice(1);
+  // bare local number (India is 10 digits; Gulf mobiles are 9) → prepend country code
+  if (d.length === 10 || (cc !== "91" && d.length === 9)) return cc + d;
   return d;
+}
+
+/** WhatsApp number for a lead, using its area (falling back to address) to pick the country code. */
+export function waNumber(b: { phone: string | null; area?: string | null; address?: string | null }): string {
+  return toWhatsappNumber(b.phone, `${b.area ?? ""} ${b.address ?? ""}`);
 }
 
 export function whatsappLink(number: string, message?: string): string {

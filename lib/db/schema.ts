@@ -46,6 +46,10 @@ export const businesses = pgTable(
     categoryLabel: text("category_label"),
     types: jsonb("types").$type<string[]>().notNull().default([]),
     address: text("address"),
+    /** Where the lead is based (Dubai, Mumbai…). Groups the Leads list and picks the WhatsApp country code. */
+    area: text("area"),
+    /** Canonical phone for duplicate / do-not-contact matching (lib/area.ts normPhone). "" = none. */
+    phoneKey: text("phone_key"),
     lat: doublePrecision("lat"),
     lng: doublePrecision("lng"),
     phone: text("phone"),
@@ -70,6 +74,8 @@ export const businesses = pgTable(
   (t) => [
     index("businesses_score_idx").on(t.score),
     index("businesses_category_idx").on(t.category),
+    index("businesses_area_idx").on(t.area),
+    index("businesses_phone_key_idx").on(t.phoneKey),
     index("businesses_geo_idx").on(t.lat, t.lng),
   ],
 );
@@ -93,9 +99,11 @@ export const leads = pgTable("leads", {
   quotePackage: text("quote_package"),
   quoteAmount: integer("quote_amount"),
   commissionPaid: boolean("commission_paid").notNull().default(false),
+  /** When the lead moved to Won (commission month). Null on older rows: fall back to updated_at. */
+  wonAt: timestamp("won_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("leads_assigned_stage_idx").on(t.assignedTo, t.stage), index("leads_stage_updated_idx").on(t.stage, t.updatedAt)]);
+}, (t) => [index("leads_assigned_stage_idx").on(t.assignedTo, t.stage), index("leads_stage_updated_idx").on(t.stage, t.updatedAt), index("leads_stage_idx").on(t.stage)]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -107,6 +115,8 @@ export const users = pgTable("users", {
   commissionPct: integer("commission_pct").notNull().default(10),
   dailyTarget: integer("daily_target").notNull().default(15),
   isActive: boolean("is_active").notNull().default(true),
+  /** Sessions issued before this moment are rejected (set on password change / "sign out everywhere"). */
+  sessionsValidFrom: timestamp("sessions_valid_from", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -123,7 +133,7 @@ export const leadActivity = pgTable(
     detail: text("detail"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("lead_activity_lead_idx").on(t.leadId), index("lead_activity_user_idx").on(t.userId, t.createdAt)],
+  (t) => [index("lead_activity_lead_idx").on(t.leadId, t.createdAt), index("lead_activity_user_idx").on(t.userId, t.createdAt)],
 );
 
 export const leadRequests = pgTable("lead_requests", {
@@ -178,7 +188,7 @@ export const sites = pgTable("sites", {
   publishedUrl: text("published_url"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [index("sites_business_idx").on(t.businessId)]);
 
 export const scans = pgTable("scans", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -210,6 +220,12 @@ export const settings = pgTable("settings", {
   defaultQuoteMax: integer("default_quote_max").notNull().default(3000),
   pinHash: text("pin_hash"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const loginAttempts = pgTable("login_attempts", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type BusinessRecord = typeof businesses.$inferSelect;

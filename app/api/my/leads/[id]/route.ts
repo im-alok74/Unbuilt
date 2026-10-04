@@ -6,9 +6,10 @@ import { businesses, leads, leadActivity, users, dnc } from "@/lib/db/schema";
 import { requireSession } from "@/lib/session";
 import { getBusinessRow } from "@/lib/rows";
 import { ensureLead, logActivity, updateLead } from "@/lib/leads";
-import { normPhone } from "@/lib/phone";
+import { normPhone } from "@/lib/area";
 import { notifyStaff } from "@/lib/push";
-import { STAGES } from "@/lib/types";
+import { STAGES, canMove, type Stage } from "@/lib/types";
+import { revalidateLeadsCache } from "@/lib/cache";
 import { PACKAGES, MIN_PRICE, MAX_PRICE } from "@/lib/packages";
 
 export const dynamic = "force-dynamic";
@@ -72,35 +73,43 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!p.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   const { log, quote, ...patch } = p.data;
   const stage = patch.stage as (typeof STAGES)[number] | undefined;
-
-  if (stage === "won" && !patch.projectValue && !g.lead?.projectValue) {
-    return NextResponse.json({ error: "Enter the project value to mark this Won." }, { status: 400 });
-  }
+  const staff = g.s.role !== "rep";
 
   const lead = await ensureLead(id);
-  await updateLead(id, g.s.userId, { ...patch, stage, ...(quote ? { quotePackage: quote.package, quoteAmount: quote.amount } : {}) });
-  if (quote && !stage && ["new", "contacted", "demo_sent"].includes(lead.stage)) {
-    await updateLead(id, g.s.userId, { stage: "quoted" });
+  if (stage === "won" && !(patch.projectValue ?? lead.projectValue)) {
+    return NextResponse.json({ error: "Enter the project value to mark this Won." }, { status: 400 });
+  }
+  if (stage && !canMove(lead.stage as Stage, stage, staff)) {
+    return NextResponse.json({ error: `Can't move a ${lead.stage} lead to ${stage}.` }, { status: 409 });
   }
 
-  // First real touch moves a "new" lead to "contacted".
+  // Work out the single stage this request ends in.
   const touched = log && ["called", "whatsapped", "no_answer", "callback", "not_interested", "wrong_number"].includes(log.action);
-  if (touched && !stage && !quote && lead.stage === "new") await updateLead(id, g.s.userId, { stage: "contacted" });
+  let next = stage;
+  if (log && (log.action === "dnc" || log.action === "wrong_number" || (log.action === "not_interested" && !stage))) next = "lost";
+  else if (!stage && quote && ["new", "contacted", "demo_sent"].includes(lead.stage)) next = "quoted";
+  else if (!stage && !quote && touched && lead.stage === "new") next = "contacted"; // first real touch
 
-  if (log) {
-    await logActivity(lead.id, g.s.userId, log.action, log.detail);
-    if (log.action === "dnc" || log.action === "wrong_number") {
-      const [b] = await db.select({ phone: businesses.phone }).from(businesses).where(eq(businesses.id, id)).limit(1);
-      const ph = normPhone(b?.phone);
-      if (ph) {
-        await db.insert(dnc).values({ phone: ph, reason: log.action, addedBy: g.s.userId }).onConflictDoNothing();
+  // One transaction: a failure can't leave the number in DNC with the lead still open.
+  await db.transaction(async (tx) => {
+    if (log) {
+      await logActivity(lead.id, g.s.userId, log.action, log.detail, tx);
+      if (log.action === "dnc" || log.action === "wrong_number") {
+        const [b] = await tx.select({ phone: businesses.phone, area: businesses.area, address: businesses.address }).from(businesses).where(eq(businesses.id, id)).limit(1);
+        const ph = normPhone(b?.phone, `${b?.area ?? ""} ${b?.address ?? ""}`);
+        if (ph) await tx.insert(dnc).values({ phone: ph, reason: log.action, addedBy: g.s.userId }).onConflictDoNothing();
       }
-      await updateLead(id, g.s.userId, { stage: "lost" });
     }
-    if (log.action === "not_interested" && !stage) await updateLead(id, g.s.userId, { stage: "lost" });
-  }
+    await updateLead(
+      id,
+      g.s.userId,
+      { ...patch, stage: next, ...(quote ? { quotePackage: quote.package, quoteAmount: quote.amount } : {}) },
+      { staff, tx },
+    );
+  });
+  revalidateLeadsCache();
 
-  if (stage === "won" && g.s.role === "rep") {
+  if (stage === "won" && lead.stage !== "won" && g.s.role === "rep") {
     const b = await getBusinessRow(id);
     await notifyStaff({
       title: "Deal won",

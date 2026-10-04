@@ -1,13 +1,16 @@
 "use client";
 
 import * as React from "react";
+import useSWR from "swr";
 import { X } from "lucide-react";
+import { fetcher } from "@/lib/hooks";
 import { Button, Field, Input, Spinner, Textarea } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 
 export function AddLeadDialog({ open, onClose, onDone }: { open: boolean; onClose: () => void; onDone: (id: string) => void }) {
   const { push } = useToast();
-  const [f, setF] = React.useState({ name: "", phone: "", category: "", address: "", website: "", notes: "" });
+  const [f, setF] = React.useState({ name: "", phone: "", category: "", address: "", area: "", website: "", notes: "" });
+  const { data: areaData } = useSWR<{ areas: { area: string }[] }>(open ? "/api/areas" : null, fetcher, { revalidateOnFocus: false });
   const [busy, setBusy] = React.useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF((s) => ({ ...s, [k]: e.target.value }));
 
@@ -24,7 +27,7 @@ export function AddLeadDialog({ open, onClose, onDone }: { open: boolean; onClos
     if (!res?.ok) return push(d?.error ?? "Couldn't add lead", "error");
     if (!d.imported) return push(d.skipped?.dnc ? "That number is on the do-not-contact list." : "A lead with that phone number already exists.", "error");
     push("Lead added", "success");
-    setF({ name: "", phone: "", category: "", address: "", website: "", notes: "" });
+    setF({ name: "", phone: "", category: "", address: "", area: "", website: "", notes: "" });
     onDone(d.businessIds[0]);
     onClose();
   }
@@ -54,9 +57,15 @@ export function AddLeadDialog({ open, onClose, onDone }: { open: boolean; onClos
             <Input value={f.category} onChange={set("category")} placeholder="Salon, Gym…" />
           </Field>
         </div>
-        <Field label="Address">
-          <Input value={f.address} onChange={set("address")} />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Area / city">
+            <Input value={f.area} onChange={set("area")} list="lead-areas" placeholder="Dubai, Mumbai…" />
+            <datalist id="lead-areas">{areaData?.areas.map((x) => <option key={x.area} value={x.area} />)}</datalist>
+          </Field>
+          <Field label="Address">
+            <Input value={f.address} onChange={set("address")} />
+          </Field>
+        </div>
         <Field label="Website (if any)">
           <Input value={f.website} onChange={set("website")} placeholder="https://" />
         </Field>

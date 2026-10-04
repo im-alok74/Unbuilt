@@ -6,12 +6,13 @@ import { Button, Select, Spinner } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
-type Field = "name" | "phone" | "category" | "address" | "website" | "notes";
+type Field = "name" | "phone" | "category" | "address" | "area" | "website" | "notes";
 const FIELDS: { key: Field; label: string; hints: string[] }[] = [
   { key: "name", label: "Business name", hints: ["name", "business", "company", "shop", "firm", "title"] },
   { key: "phone", label: "Phone", hints: ["phone", "mobile", "contact", "number", "whatsapp", "cell"] },
   { key: "category", label: "Category", hints: ["category", "type", "niche", "industry", "segment"] },
-  { key: "address", label: "Address", hints: ["address", "location", "area", "city", "locality"] },
+  { key: "address", label: "Address", hints: ["address", "location"] },
+  { key: "area", label: "Area / city", hints: ["area", "city", "emirate", "region", "locality"] },
   { key: "website", label: "Website", hints: ["website", "site", "url", "web"] },
   { key: "notes", label: "Notes", hints: ["note", "remark", "comment", "detail"] },
 ];
@@ -56,7 +57,7 @@ export function ImportDialog({ open, onClose, onDone }: { open: boolean; onClose
   const { push } = useToast();
   const [file, setFile] = React.useState("");
   const [grid, setGrid] = React.useState<string[][]>([]);
-  const [map, setMap] = React.useState<Record<Field, number>>({ name: -1, phone: -1, category: -1, address: -1, website: -1, notes: -1 });
+  const [map, setMap] = React.useState<Record<Field, number>>({ name: -1, phone: -1, category: -1, address: -1, area: -1, website: -1, notes: -1 });
   const [busy, setBusy] = React.useState(false);
   const [drag, setDrag] = React.useState(false);
 
@@ -94,6 +95,7 @@ export function ImportDialog({ open, onClose, onDone }: { open: boolean; onClose
         phone: pick(r, "phone") || undefined,
         category: pick(r, "category") || undefined,
         address: pick(r, "address") || undefined,
+        area: pick(r, "area") || undefined,
         website: pick(r, "website") || undefined,
         notes: pick(r, "notes") || undefined,
       }))

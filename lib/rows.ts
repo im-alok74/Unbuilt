@@ -4,6 +4,7 @@ import { eq, asc, desc, inArray, and, or, gte, sql, isNull, getTableColumns, typ
 import { db } from "@/lib/db";
 import { businesses, leads, sites, users } from "@/lib/db/schema";
 import type { BusinessRow, LeadStatus, Stage } from "@/lib/types";
+import { deriveArea } from "@/lib/area";
 import { getNiche } from "@/lib/niches";
 import { LEADS_LIST_TAG, NICHE_LEADS_TAG } from "@/lib/cache";
 
@@ -32,6 +33,7 @@ function toRow(r: {
     categoryLabel: b.categoryLabel,
     types: b.types ?? [],
     address: b.address,
+    area: b.area ?? deriveArea(b.address),
     lat: b.lat,
     lng: b.lng,
     phone: b.phone,
@@ -72,9 +74,10 @@ export interface ListFilters {
   status?: LeadStatus[];
   stage?: Stage[];
   search?: string;
+  area?: string;
   /** "unassigned" | user id. Reps are always forced to their own id by the API. */
   assignedTo?: string;
-  sort?: "score" | "name" | "rating" | "reviews" | "recent";
+  sort?: "area" | "score" | "name" | "rating" | "reviews" | "recent";
   dir?: "asc" | "desc";
   /** 1-based page number. Only applied when `pageSize` is also set. */
   page?: number;
@@ -98,10 +101,13 @@ function buildConds(filters: ListFilters): SQL[] {
   if (filters.assignedTo === "unassigned") conds.push(isNull(leads.assignedTo));
   else if (filters.assignedTo) conds.push(eq(leads.assignedTo, filters.assignedTo));
   if (filters.status && filters.status.length) {
-    conds.push(sql`coalesce(${leads.status}::text, 'not_contacted') in ${filters.status}`);
+    const c = inArray(leads.status, filters.status);
+    conds.push((filters.status as string[]).includes("not_contacted") ? or(c, isNull(leads.id))! : c);
   }
+  if (filters.area) conds.push(eq(businesses.area, filters.area));
   if (filters.stage && filters.stage.length) {
-    conds.push(sql`coalesce(${leads.stage}, 'new') in ${filters.stage}`);
+    const c = inArray(leads.stage, filters.stage);
+    conds.push((filters.stage as string[]).includes("new") ? or(c, isNull(leads.id))! : c);
   }
   if (filters.search && filters.search.trim()) {
     conds.push(sql`${businesses.name} ilike ${"%" + filters.search.trim() + "%"}`);
@@ -112,6 +118,8 @@ function buildConds(filters: ListFilters): SQL[] {
 function orderExprs(sort: ListFilters["sort"], dir: ListFilters["dir"]) {
   const dirFn = dir === "asc" ? asc : desc;
   switch (sort) {
+    case "area":
+      return [asc(sql`coalesce(${businesses.area}, '~')`), desc(businesses.score)];
     case "name":
       return [dirFn(businesses.name)];
     case "rating":

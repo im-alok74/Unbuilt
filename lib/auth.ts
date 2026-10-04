@@ -8,6 +8,8 @@ export interface Session {
   userId: string;
   role: Role;
   name: string;
+  /** Issued-at, seconds. Only set by verifySessionToken. */
+  iat?: number;
 }
 
 function secret(): Uint8Array {
@@ -21,7 +23,7 @@ export async function createSessionToken(u: Session): Promise<string> {
     .setProtectedHeader({ alg: ALG })
     .setSubject(u.userId)
     .setIssuedAt()
-    .setExpirationTime("30d")
+    .setExpirationTime("14d")
     .sign(secret());
 }
 
@@ -31,7 +33,7 @@ export async function verifySessionToken(token: string | undefined | null): Prom
   try {
     const { payload } = await jwtVerify(token, secret(), { algorithms: [ALG] });
     if (!payload.sub || !payload.role) return null;
-    return { userId: payload.sub, role: payload.role as Role, name: String(payload.name ?? "") };
+    return { userId: payload.sub, role: payload.role as Role, name: String(payload.name ?? ""), iat: payload.iat };
   } catch {
     return null;
   }

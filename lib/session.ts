@@ -14,6 +14,7 @@ export async function getSession(): Promise<Session | null> {
   if (!s) return null;
   const [u] = await db.select().from(users).where(eq(users.id, s.userId)).limit(1);
   if (!u || !u.isActive) return null;
+  if (u.sessionsValidFrom && (s.iat ?? 0) < Math.floor(u.sessionsValidFrom.getTime() / 1000)) return null;
   return { userId: u.id, role: u.role, name: u.displayName };
 }
 

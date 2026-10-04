@@ -4,13 +4,15 @@ import * as React from "react";
 import { useConfig, useBusinesses } from "@/lib/hooks";
 import { useApp, filtersToQuery } from "@/components/app-context";
 import { useToast } from "@/components/ui/toast";
-import { MapCanvas } from "@/components/map/MapCanvas";
+import dynamic from "next/dynamic";
 import { FallbackMap } from "@/components/map/FallbackMap";
 import { TopBar } from "@/components/map/TopBar";
 import { FilterSheet } from "@/components/FilterSheet";
 import { ScanControls } from "@/components/map/ScanControls";
 import { MapKey, useMapKey } from "@/components/map/MapKey";
 import { MapPreviewCard } from "@/components/map/MapPreviewCard";
+
+const MapCanvas = dynamic(() => import("@/components/map/MapCanvas").then((m) => m.MapCanvas), { ssr: false });
 
 export function MapScreen() {
   const { config } = useConfig();

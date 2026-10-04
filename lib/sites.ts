@@ -7,7 +7,7 @@ import { getConfig } from "@/lib/settings";
 import { generateSiteCopy } from "@/lib/llm/provider";
 import { getTemplateMeta } from "@/lib/templates";
 import { slugify, randomSuffix } from "@/lib/slug";
-import { toWhatsappNumber, directionsLink } from "@/lib/whatsapp";
+import { waNumber, directionsLink } from "@/lib/whatsapp";
 import { resolvePhotoUrl } from "@/lib/photos";
 import type { BusinessRow, SiteContent, SiteHighlight, SitePhoto } from "@/lib/types";
 import type { SiteRecord } from "@/lib/db/schema";
@@ -50,7 +50,7 @@ export async function buildInitialContent(
     brief,
   });
 
-  const wa = toWhatsappNumber(b.phone);
+  const wa = waNumber(b);
   const content: SiteContent = {
     businessName: b.name,
     tagline: copy.tagline,

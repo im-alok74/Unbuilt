@@ -1,3 +1,4 @@
+import { requireSession, STAFF } from "@/lib/session";
 import { NextResponse } from "next/server";
 import { monthlyUsage } from "@/lib/places";
 import { getConfig } from "@/lib/settings";
@@ -10,6 +11,8 @@ export const dynamic = "force-dynamic";
 const FREE_NEARBY_ENTERPRISE = 1000;
 
 export async function GET() {
+  const _auth = await requireSession(STAFF);
+  if (_auth instanceof NextResponse) return _auth;
   const cfg = await getConfig();
   const usage = await monthlyUsage();
   const cap = FREE_NEARBY_ENTERPRISE;

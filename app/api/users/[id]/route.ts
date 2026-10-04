@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { password, ...rest } = p.data;
   await db
     .update(users)
-    .set({ ...rest, ...(password ? { passwordHash: hashPassword(password) } : {}) })
+    .set({ ...rest, ...(password ? { passwordHash: hashPassword(password), sessionsValidFrom: new Date() } : {}) })
     .where(eq(users.id, id));
   return NextResponse.json({ ok: true });
 }

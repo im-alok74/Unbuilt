@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -6,17 +7,34 @@ import { placesBudget } from "@/lib/places";
 
 export const dynamic = "force-dynamic";
 
+function appTz(): string {
+  const tz = process.env.APP_TZ || "Asia/Kolkata";
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return tz;
+  } catch {
+    return "Asia/Kolkata";
+  }
+}
+
+function authorized(header: string | null, secret: string): boolean {
+  const a = Buffer.from(header ?? "");
+  const b = Buffer.from(`Bearer ${secret}`);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 /** Daily push digest, triggered by Vercel Cron (vercel.json). Authenticated with CRON_SECRET, not a user session. */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secret || !authorized(req.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
+  const tz = appTz();
   const reps = await db.execute(sql`
     select u.id,
       (select count(*) from leads l where l.assigned_to = u.id and l.stage not in ('won','lost')
-         and l.next_follow_up < date_trunc('day', now() at time zone 'Asia/Kolkata') at time zone 'Asia/Kolkata' + interval '1 day')::int as due,
+         and l.next_follow_up < date_trunc('day', now() at time zone ${tz}) at time zone ${tz} + interval '1 day')::int as due,
       (select count(*) from leads l where l.assigned_to = u.id and l.stage = 'new')::int as fresh
     from users u where u.role = 'rep' and u.is_active`);
   let sent = 0;

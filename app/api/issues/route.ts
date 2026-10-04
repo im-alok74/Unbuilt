@@ -51,7 +51,7 @@ export async function GET() {
       createdAt: i.created_at,
       kind: i.labels.some((l) => l.name === "bug") ? "bug" : i.labels.some((l) => l.name === "enhancement") ? "idea" : "question",
       reporter: /\*\*Reported by:\*\* ([^\n(]+)/.exec(i.body ?? "")?.[1]?.trim() ?? "",
-      reporterId: /<!-- reporter:([0-9a-f-]+) -->/.exec(i.body ?? "")?.[1] ?? "",
+      reporterId: /^<!-- reporter:([0-9a-f-]+) -->/.exec(i.body ?? "")?.[1] ?? "",
     }))
     .filter((i) => s.role !== "rep" || i.reporterId === s.userId)
     .map(({ reporterId: _r, ...rest }) => rest);
@@ -75,17 +75,19 @@ export async function POST(req: NextRequest) {
   if (!p.success) return NextResponse.json({ error: p.error.issues[0]?.message ?? "Invalid input" }, { status: 400 });
   const d = p.data;
 
+  // Real marker goes first and is the only one parsed; user text can't contain "<!--".
+  const clean = (t: string) => t.replace(/<!--/g, "&lt;!--");
   const body = [
-    d.details,
+    `<!-- reporter:${s.userId} -->`,
+    clean(d.details),
     "",
     "---",
-    `**Reported by:** ${s.name} (${s.role})`,
-    `**Page:** ${d.page || "unknown"}`,
-    `**Device:** ${req.headers.get("user-agent") ?? "unknown"}`,
+    `**Reported by:** ${clean(s.name)} (${s.role})`,
+    `**Page:** ${clean(d.page || "unknown")}`,
+    `**Device:** ${clean(req.headers.get("user-agent") ?? "unknown")}`,
     `**When:** ${new Date().toISOString()}`,
     "",
     "_Filed from the Unbuilt dashboard._",
-    `<!-- reporter:${s.userId} -->`,
   ].join("\n");
 
   const res = await gh("/issues", {

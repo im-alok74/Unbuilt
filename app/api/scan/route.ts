@@ -18,6 +18,8 @@ const bodySchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
+  const _auth = await requireSession(STAFF);
+  if (_auth instanceof NextResponse) return _auth;
   const radius = Number(req.nextUrl.searchParams.get("radiusM") ?? "1000");
   const cfg = await getConfig();
   const est = estimateScan(Math.min(Math.max(radius, 200), 10000));

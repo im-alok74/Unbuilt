@@ -2,6 +2,7 @@ import "server-only";
 import { sql, inArray, and, gte, between, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businesses, leads, scans } from "@/lib/db/schema";
+import { deriveArea, normPhone } from "@/lib/area";
 import { getConfig } from "@/lib/settings";
 import { scoreBusiness } from "@/lib/scoring/score";
 import type { NormalizedBusiness } from "@/lib/types";
@@ -158,6 +159,8 @@ export async function runScan(args: ScanArgs): Promise<ScanOutcome> {
       categoryLabel: s.b.categoryLabel,
       types: s.b.types,
       address: s.b.address,
+      area: deriveArea(s.b.address),
+      phoneKey: normPhone(s.b.phone, s.b.address),
       lat: s.b.lat,
       lng: s.b.lng,
       phone: s.b.phone,
@@ -183,9 +186,11 @@ export async function runScan(args: ScanArgs): Promise<ScanOutcome> {
       categoryLabel: sql`excluded.category_label`,
       types: sql`excluded.types`,
       address: sql`excluded.address`,
+      area: sql`coalesce(${businesses.area}, excluded.area)`, // keep an area a person set by hand
       lat: sql`excluded.lat`,
       lng: sql`excluded.lng`,
       phone: sql`excluded.phone`,
+      phoneKey: sql`excluded.phone_key`,
       websiteRaw: sql`excluded.website_raw`,
       websiteStatus: sql`excluded.website_status`,
       rating: sql`excluded.rating`,

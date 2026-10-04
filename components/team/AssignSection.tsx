@@ -22,7 +22,7 @@ interface Activity {
 export function AssignSection({ b, onChanged }: { b: BusinessRow; onChanged: () => void }) {
   const { push } = useToast();
   const { users, refresh } = useTeam();
-  const reps = users.filter((u) => u.role === "rep" && u.isActive);
+  const reps = users.filter((u) => u.isActive); // admins and managers sell too
   const [rep, setRep] = React.useState(b.assignedTo ?? "");
   const [busy, setBusy] = React.useState<string | null>(null);
   const [editing, setEditing] = React.useState(false);
@@ -79,7 +79,7 @@ export function AssignSection({ b, onChanged }: { b: BusinessRow; onChanged: () 
             <option value="">Unassigned</option>
             {reps.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.displayName} ({r.assigned} leads)
+                {r.role === "rep" ? r.displayName : `${r.displayName} (${r.role})`} ({r.assigned} leads)
               </option>
             ))}
           </Select>

@@ -1,3 +1,4 @@
+import { requireSession, STAFF } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createSite } from "@/lib/sites";
@@ -14,6 +15,8 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const _auth = await requireSession(STAFF);
+  if (_auth instanceof NextResponse) return _auth;
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

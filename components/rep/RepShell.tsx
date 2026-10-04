@@ -3,15 +3,17 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, List, PlusCircle, BarChart3, WifiOff } from "lucide-react";
+import { Home, List, Send, PlusCircle, BarChart3, WifiOff, LayoutDashboard } from "lucide-react";
 import { useSWRConfig } from "swr";
 import { SwrProvider } from "@/components/SwrProvider";
 import { ToastProvider, useToast } from "@/components/ui/toast";
+import { useMe } from "@/lib/hooks";
 import { flushQueue, pendingCount } from "@/lib/offline";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { label: "Today", icon: Home, href: "/rep" },
+  { label: "Outreach", icon: Send, href: "/rep/outreach" },
   { label: "Leads", icon: List, href: "/rep/leads" },
   { label: "Request", icon: PlusCircle, href: "/rep/request" },
   { label: "Stats", icon: BarChart3, href: "/rep/stats" },
@@ -21,6 +23,8 @@ function Inner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { push } = useToast();
   const { mutate } = useSWRConfig();
+  const me = useMe();
+  const items = me && me.role !== "rep" ? [...ITEMS, { label: "Admin", icon: LayoutDashboard, href: "/home" }] : ITEMS;
   const [offline, setOffline] = React.useState(false);
 
   React.useEffect(() => {
@@ -53,7 +57,7 @@ function Inner({ children }: { children: React.ReactNode }) {
       {children}
       <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] flex justify-center px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
         <div className="chrome pointer-events-auto flex w-full max-w-sm items-center justify-between rounded-full px-2 py-2 shadow-chrome">
-          {ITEMS.map((it) => {
+          {items.map((it) => {
             const Icon = it.icon;
             const active = it.href === "/rep" ? pathname === "/rep" : pathname.startsWith(it.href);
             return (

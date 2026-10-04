@@ -3,7 +3,8 @@ import { LEAD_STATUS_LABELS, SITE_STATUS_LABELS, STAGE_LABELS } from "@/lib/type
 
 function cell(v: unknown): string {
   if (v === null || v === undefined) return "";
-  const s = String(v);
+  let s = String(v);
+  if (/^(=|@|[+-][^\d\s(])/.test(s)) s = "'" + s; // stop Excel running scraped text as a formula
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
 }

@@ -4,7 +4,7 @@ import useSWR from "swr";
 import type { BusinessRow, ScoringWeights } from "@/lib/types";
 
 export const fetcher = (url: string) =>
-  fetch(url).then((r) => {
+  fetch(url, { headers: { "x-tz": Intl.DateTimeFormat().resolvedOptions().timeZone } }).then((r) => {
     if (!r.ok) throw new Error(`${r.status}`);
     return r.json();
   });

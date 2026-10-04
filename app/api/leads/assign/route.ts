@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { and, eq, inArray, ne, notInArray, sql, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, ne, notInArray, or, sql, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { businesses, leads, leadActivity, users, dnc } from "@/lib/db/schema";
 import { requireSession, STAFF } from "@/lib/session";
-import { normPhoneSql } from "@/lib/phone";
+import { normPhone } from "@/lib/area";
+import { ensurePhoneKeys } from "@/lib/phonekeys";
 import { notifyUser } from "@/lib/push";
 import { revalidateLeadsCache } from "@/lib/cache";
 
@@ -42,40 +43,49 @@ export async function POST(req: NextRequest) {
   const reps = await db
     .select({ id: users.id })
     .from(users)
-    .where(and(inArray(users.id, targets), eq(users.role, "rep"), eq(users.isActive, true)));
+    .where(and(inArray(users.id, targets), eq(users.isActive, true)));
   if (reps.length !== new Set(targets).size) {
-    return NextResponse.json({ error: "Every target must be an active rep" }, { status: 400 });
+    return NextResponse.json({ error: "Every target must be an active user" }, { status: 400 });
   }
 
   // Phone + name for each business; drop do-not-contact numbers.
-  const biz = await db
-    .select({ id: businesses.id, name: businesses.name, phone: normPhoneSql(businesses.phone) })
+  await ensurePhoneKeys();
+  const bizRows = await db
+    .select({ id: businesses.id, name: businesses.name, key: businesses.phoneKey, phone: businesses.phone, area: businesses.area, address: businesses.address })
     .from(businesses)
     .where(inArray(businesses.id, businessIds));
-  const dncRows = await db.select({ phone: dnc.phone }).from(dnc);
+  const biz = bizRows.map((b) => ({ id: b.id, name: b.name, phone: b.key ?? normPhone(b.phone, `${b.area ?? ""} ${b.address ?? ""}`) }));
+  const allKeys = [...new Set(biz.map((b) => b.phone).filter(Boolean))].sort();
+  const dncRows = allKeys.length ? await db.select({ phone: dnc.phone }).from(dnc).where(inArray(dnc.phone, allKeys)) : [];
   const dncSet = new Set(dncRows.map((r) => r.phone));
   const skippedDnc = biz.filter((b) => b.phone && dncSet.has(b.phone)).map((b) => b.name);
-  let ok = biz.filter((b) => !(b.phone && dncSet.has(b.phone)));
+  const candidates = biz.filter((b) => !(b.phone && dncSet.has(b.phone)));
+  const keys = [...new Set(candidates.map((b) => b.phone).filter(Boolean))].sort();
 
-  // Duplicate guard: same phone already worked by a different rep on another record.
   const conflicts: { id: string; name: string }[] = [];
-  if (!force) {
-    const phones = [...new Set(ok.map((b) => b.phone).filter(Boolean))];
-    if (phones.length) {
-      const held = await db
-        .select({ phone: normPhoneSql(businesses.phone), rep: leads.assignedTo, bid: businesses.id })
+  const now = new Date();
+
+  const result = await db.transaction(async (tx) => {
+    // Serialise concurrent assigns of the same number (sorted order avoids deadlocks).
+    for (const k of keys) await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${k}))`);
+
+    // Duplicate guard: same phone already worked by a different rep on another record.
+    let ok = candidates;
+    if (!force && keys.length) {
+      const held = await tx
+        .select({ phone: businesses.phoneKey, rep: leads.assignedTo })
         .from(leads)
         .innerJoin(businesses, eq(businesses.id, leads.businessId))
         .where(
           and(
             isNotNull(leads.assignedTo),
             ne(leads.stage, "lost"),
-            notInArray(businesses.id, ok.map((b) => b.id)),
-            inArray(normPhoneSql(businesses.phone), phones),
+            notInArray(businesses.id, candidates.map((b) => b.id)),
+            inArray(businesses.phoneKey, keys),
           ),
         );
-      const heldBy = new Map(held.map((h) => [h.phone, h.rep]));
-      ok = ok.filter((b) => {
+      const heldBy = new Map(held.map((h) => [h.phone ?? "", h.rep]));
+      ok = candidates.filter((b) => {
         const rep = b.phone ? heldBy.get(b.phone) : undefined;
         if (rep && !targets.includes(rep)) {
           conflicts.push({ id: b.id, name: b.name });
@@ -84,33 +94,52 @@ export async function POST(req: NextRequest) {
         return true;
       });
     }
-  }
 
-  const now = new Date();
-  const target = (i: number) => targets[i % targets.length];
-  const rows = ok.map((b, i) => ({ businessId: b.id, assignedTo: target(i), assignedAt: now }));
-  const byBiz = new Map(rows.map((r) => [r.businessId, r.assignedTo]));
-  if (rows.length) {
-    const up = await db
+    // Same phone twice in one batch goes to the same rep (round-robin advances per distinct number).
+    const repForKey = new Map<string, string>();
+    let n = 0;
+    const rows = ok.map((b) => {
+      let rep = b.phone ? repForKey.get(b.phone) : undefined;
+      if (!rep) {
+        rep = targets[n++ % targets.length];
+        if (b.phone) repForKey.set(b.phone, rep);
+      }
+      return { businessId: b.id, assignedTo: rep, assignedAt: now };
+    });
+    if (!rows.length) return { rows: [] as typeof rows, up: [] as { id: string; businessId: string }[] };
+
+    // Don't steal a lead another rep already holds unless forced.
+    const up = await tx
       .insert(leads)
       .values(rows)
       .onConflictDoUpdate({
         target: leads.businessId,
         set: { assignedTo: sql`excluded.assigned_to`, assignedAt: sql`excluded.assigned_at`, updatedAt: now },
+        ...(force ? {} : { setWhere: or(isNull(leads.assignedTo), sql`${leads.assignedTo} = excluded.assigned_to`) }),
       })
       .returning({ id: leads.id, businessId: leads.businessId });
-    await db.insert(leadActivity).values(
-      up.map((l) => ({ leadId: l.id, userId: s.userId, action: "assigned", detail: byBiz.get(l.businessId) ?? null })),
-    );
+    const done = new Set(up.map((l) => l.businessId));
+    for (const b of ok) if (!done.has(b.id)) conflicts.push({ id: b.id, name: b.name });
+    const byBiz = new Map(rows.map((r) => [r.businessId, r.assignedTo]));
+    if (up.length) {
+      await tx.insert(leadActivity).values(
+        up.map((l) => ({ leadId: l.id, userId: s.userId, action: "assigned", detail: byBiz.get(l.businessId) ?? null })),
+      );
+    }
+    return { rows: rows.filter((r) => done.has(r.businessId)), up };
+  });
+
+  if (result.rows.length) {
     const counts = new Map<string, number>();
-    for (const r of rows) counts.set(r.assignedTo, (counts.get(r.assignedTo) ?? 0) + 1);
-    await Promise.all(
-      [...counts].map(([uid, n]) =>
-        notifyUser(uid, { title: "New leads", body: `${n} new lead${n === 1 ? "" : "s"} assigned to you`, url: "/rep" }),
+    for (const r of result.rows) counts.set(r.assignedTo, (counts.get(r.assignedTo) ?? 0) + 1);
+    // A push failure must not turn a successful assign into a 500.
+    await Promise.allSettled(
+      [...counts].map(([uid, c]) =>
+        notifyUser(uid, { title: "New leads", body: `${c} new lead${c === 1 ? "" : "s"} assigned to you`, url: "/rep" }),
       ),
     );
   }
 
   revalidateLeadsCache();
-  return NextResponse.json({ assigned: rows.length, skippedDnc, conflicts });
+  return NextResponse.json({ assigned: result.rows.length, skippedDnc, conflicts });
 }

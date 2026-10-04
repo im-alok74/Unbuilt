@@ -4,12 +4,12 @@ import * as React from "react";
 import { MessageCircle, Send } from "lucide-react";
 import { sendOrQueue } from "@/lib/offline";
 import { waTemplates } from "@/lib/wamessages";
-import { toWhatsappNumber, whatsappLink } from "@/lib/whatsapp";
+import { waNumber, whatsappLink } from "@/lib/whatsapp";
 import type { BusinessRow } from "@/lib/types";
 
 /** One-tap WhatsApp messages. Opens WhatsApp with the text filled in and records it on the lead. */
 export function WaMessages({ b, repName, onSent }: { b: BusinessRow; repName: string; onSent: () => void }) {
-  const wa = toWhatsappNumber(b.phone);
+  const wa = waNumber(b);
   const [open, setOpen] = React.useState(false);
   const demo = b.siteSlug ? `${location.origin}/s/${b.siteSlug}` : "";
   const list = waTemplates({ business: b.name, rep: repName, rating: b.rating, hasWebsite: b.websiteStatus === "real", demoUrl: demo }).filter(

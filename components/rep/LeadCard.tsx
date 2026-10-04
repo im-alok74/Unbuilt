@@ -23,7 +23,8 @@ import { QuoteBuilder } from "@/components/rep/QuoteBuilder";
 import { WaMessages } from "@/components/rep/WaMessages";
 import { Badge, Button, Input, ScoreBadge, Spinner, Textarea } from "@/components/ui/primitives";
 import { STAGES, STAGE_LABELS, type BusinessRow, type Stage } from "@/lib/types";
-import { toWhatsappNumber, whatsappLink, directionsLink } from "@/lib/whatsapp";
+import { firstPitch } from "@/lib/wapitch";
+import { waNumber, whatsappLink, directionsLink } from "@/lib/whatsapp";
 import { timeAgo, cn } from "@/lib/utils";
 
 interface Activity {
@@ -116,17 +117,19 @@ export function LeadCard() {
     );
   }
 
-  const wa = toWhatsappNumber(b.phone);
+  const wa = waNumber(b);
   const demo = b.siteSlug ? `${location.origin}/s/${b.siteSlug}` : "";
-  const waMsg = [
-    `Hi, this is ${me?.name ?? "a member of our team"} from Unbuilt. I came across ${b.name} on Google Maps${
-      b.rating ? ` — ${b.rating}★ is great!` : "."
-    }`,
-    b.websiteStatus === "none" ? "I noticed you don't have a website yet, and I help local businesses get one." : "",
-    demo ? `I made a quick preview for you: ${demo}` : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const waMsg = firstPitch({
+    name: b.name,
+    category: b.category,
+    types: b.types,
+    area: b.area,
+    address: b.address,
+    rating: b.rating,
+    hasWebsite: b.websiteStatus === "real",
+    demoUrl: demo || undefined,
+    rep: me?.name ?? "our team",
+  });
 
   const touch = (action: string) => patch({ log: { action } });
 

@@ -2,8 +2,10 @@
 
 import * as React from "react";
 import useSWR from "swr";
-import { Search, Upload, Plus, Download, UserPlus, Shuffle, X } from "lucide-react";
-import { fetcher, useTeam } from "@/lib/hooks";
+import useSWRInfinite from "swr/infinite";
+import { Search, Upload, Plus, Download, UserPlus, Shuffle, X, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { fetcher, useMe, useTeam } from "@/lib/hooks";
 import { useApp } from "@/components/app-context";
 import { useToast } from "@/components/ui/toast";
 import { Badge, Button, ScoreBadge, Select } from "@/components/ui/primitives";
@@ -15,18 +17,55 @@ import { cn } from "@/lib/utils";
 
 const PAGE = 100;
 
+type PoolRowProps = { b: BusinessRow; selected: boolean; onToggle: (id: string) => void; onOpen: (id: string) => void; showAreaHeader: boolean };
+
+const PoolRow = React.memo(function PoolRow({ b, selected, onToggle, onOpen, showAreaHeader }: PoolRowProps) {
+  return (
+    <>
+      {showAreaHeader && (
+        <p className="sticky top-0 z-10 border-t border-gray-100 bg-gray-50 px-4 py-1.5 text-xs font-semibold text-gray-600 first:border-0">
+          {b.area ?? "No area"}
+        </p>
+      )}
+      <div className={cn("flex items-center gap-3 border-t border-gray-100 px-4 py-2.5 first:border-0", selected && "bg-accent-wash/60")}>
+        <input type="checkbox" checked={selected} onChange={() => onToggle(b.id)} aria-label={`Select ${b.name}`} />
+        <button onClick={() => onOpen(b.id)} className="min-w-0 flex-1 text-left">
+          <p className="truncate text-sm font-medium text-gray-900">{b.name}</p>
+          <p className="truncate text-xs text-gray-400">
+            {b.categoryLabel ?? b.category ?? "—"}
+            {b.phone ? ` · ${b.phone}` : " · no phone"}
+          </p>
+        </button>
+        <span className="hidden w-16 sm:block">
+          <ScoreBadge score={b.score} />
+        </span>
+        <span className="hidden w-24 md:block">
+          <StageBadge stage={b.stage} />
+        </span>
+        <span className="w-28 truncate text-right text-xs sm:text-left">
+          {b.assignedToName ? <span className="text-gray-700">{b.assignedToName}</span> : <Badge tone="orange">Unassigned</Badge>}
+        </span>
+      </div>
+    </>
+  );
+});
+
 export function PoolScreen() {
   const { openDetail, lastScanAt } = useApp();
   const { push } = useToast();
   const { users } = useTeam();
-  const reps = users.filter((u) => u.role === "rep" && u.isActive);
+  const reps = React.useMemo(() => users.filter((u) => u.role === "rep" && u.isActive), [users]);
+  // admins and managers sell too, so leads can be assigned to them
+  const sellers = React.useMemo(() => users.filter((u) => u.isActive), [users]);
+  const who = (u: { displayName: string; role: string }) => (u.role === "rep" ? u.displayName : `${u.displayName} (${u.role})`);
+  const { data: areaData } = useSWR<{ areas: { area: string; count: number }[] }>("/api/areas", fetcher, { revalidateOnFocus: false });
 
   const [q, setQ] = React.useState("");
   const [assigned, setAssigned] = React.useState("all");
+  const [area, setArea] = React.useState("all");
   const [stage, setStage] = React.useState<Stage | "all">("all");
   const [noSite, setNoSite] = React.useState(false);
   const [minScore, setMinScore] = React.useState(0);
-  const [limit, setLimit] = React.useState(PAGE);
   const [sel, setSel] = React.useState<Set<string>>(new Set());
   const [target, setTarget] = React.useState("");
   const [importOpen, setImportOpen] = React.useState(false);
@@ -35,20 +74,24 @@ export function PoolScreen() {
   const [conflicts, setConflicts] = React.useState<{ ids: string[]; userId: string | null; userIds?: string[] } | null>(null);
 
   const query = React.useMemo(() => {
-    const p = new URLSearchParams({ total: "1", limit: String(limit) });
+    const p = new URLSearchParams({ pageSize: String(PAGE) });
+    if (area === "all") p.set("sort", "area"); // so the list reads area by area
     if (q.trim()) p.set("search", q.trim());
     if (assigned !== "all") p.set("assignedTo", assigned);
+    if (area !== "all") p.set("area", area);
     if (stage !== "all") p.set("stage", stage);
     if (noSite) p.set("noWebsiteOnly", "1");
     if (minScore) p.set("minScore", String(minScore));
     return p.toString();
-  }, [q, assigned, stage, noSite, minScore, limit]);
+  }, [q, assigned, area, stage, noSite, minScore]);
 
-  const { data, isLoading, mutate } = useSWR<{ businesses: BusinessRow[]; total: number }>(`/api/businesses?${query}`, fetcher, {
-    revalidateOnFocus: false,
-    keepPreviousData: true,
-  });
-  const rows = data?.businesses ?? [];
+  const { data: pages, isLoading, mutate, setSize } = useSWRInfinite<{ businesses: BusinessRow[]; total: number }>(
+    (i) => `/api/businesses?${query}&page=${i + 1}`,
+    fetcher,
+    { revalidateOnFocus: false, keepPreviousData: true },
+  );
+  const rows = React.useMemo(() => pages?.flatMap((p) => p.businesses) ?? [], [pages]);
+  const data = pages ? { total: pages[0].total } : undefined;
 
   React.useEffect(() => {
     mutate();
@@ -63,12 +106,18 @@ export function PoolScreen() {
   }, []);
 
   const allSelected = rows.length > 0 && rows.every((r) => sel.has(r.id));
-  const toggle = (id: string) =>
-    setSel((s) => {
-      const n = new Set(s);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
+  const toggle = React.useCallback(
+    (id: string) =>
+      setSel((s) => {
+        const n = new Set(s);
+        n.has(id) ? n.delete(id) : n.add(id);
+        return n;
+      }),
+    [],
+  );
+
+  const router = useRouter();
+  const me = useMe();
 
   async function assign(body: { userId?: string | null; userIds?: string[]; force?: boolean }, ids = [...sel]) {
     setBusy(true);
@@ -96,8 +145,10 @@ export function PoolScreen() {
       setConflicts(conflictIds.length ? { ids: conflictIds, userId: body.userId ?? null, userIds: body.userIds } : null);
       setSel(new Set());
       mutate();
+      return true;
     } catch (e) {
       push(e instanceof Error ? e.message : "Couldn't assign", "error");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -142,9 +193,17 @@ export function PoolScreen() {
           <Select value={assigned} onChange={(e) => setAssigned(e.target.value)} className="w-40">
             <option value="all">Everyone</option>
             <option value="unassigned">Unassigned</option>
-            {reps.map((r) => (
+            {sellers.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.displayName}
+                {who(r)}
+              </option>
+            ))}
+          </Select>
+          <Select value={area} onChange={(e) => setArea(e.target.value)} className="w-40">
+            <option value="all">All areas</option>
+            {areaData?.areas.map((a) => (
+              <option key={a.area} value={a.area}>
+                {a.area} ({a.count})
               </option>
             ))}
           </Select>
@@ -202,33 +261,22 @@ export function PoolScreen() {
             <span className="hidden w-24 md:block">Stage</span>
             <span className="w-28 text-right sm:text-left">Assigned</span>
           </div>
-          {rows.map((b) => (
-            <div key={b.id} className={cn("flex items-center gap-3 border-t border-gray-100 px-4 py-2.5 first:border-0", sel.has(b.id) && "bg-accent-wash/60")}>
-              <input type="checkbox" checked={sel.has(b.id)} onChange={() => toggle(b.id)} aria-label={`Select ${b.name}`} />
-              <button onClick={() => openDetail(b.id)} className="min-w-0 flex-1 text-left">
-                <p className="truncate text-sm font-medium text-gray-900">{b.name}</p>
-                <p className="truncate text-xs text-gray-400">
-                  {b.categoryLabel ?? b.category ?? "—"}
-                  {b.phone ? ` · ${b.phone}` : " · no phone"}
-                </p>
-              </button>
-              <span className="hidden w-16 sm:block">
-                <ScoreBadge score={b.score} />
-              </span>
-              <span className="hidden w-24 md:block">
-                <StageBadge stage={b.stage} />
-              </span>
-              <span className="w-28 truncate text-right text-xs sm:text-left">
-                {b.assignedToName ? <span className="text-gray-700">{b.assignedToName}</span> : <Badge tone="orange">Unassigned</Badge>}
-              </span>
-            </div>
+          {rows.map((b, i) => (
+            <PoolRow
+              key={b.id}
+              b={b}
+              selected={sel.has(b.id)}
+              onToggle={toggle}
+              onOpen={openDetail}
+              showAreaHeader={area === "all" && b.area !== (rows[i - 1]?.area ?? undefined)}
+            />
           ))}
           {!isLoading && rows.length === 0 && <p className="py-14 text-center text-sm text-gray-400">No leads match. Scan the map or import a sheet.</p>}
         </div>
 
         {data && rows.length < data.total && (
           <div className="mt-3 text-center">
-            <Button variant="subtle" onClick={() => setLimit((l) => l + PAGE)}>
+            <Button variant="subtle" onClick={() => setSize((n) => n + 1)}>
               Load more ({data.total - rows.length} left)
             </Button>
           </div>
@@ -240,15 +288,24 @@ export function PoolScreen() {
           <div className="chrome flex w-full max-w-3xl flex-wrap items-center gap-2 rounded-2xl px-4 py-3 shadow-chrome">
             <span className="text-sm font-semibold text-gray-900">{sel.size} selected</span>
             <Select value={target} onChange={(e) => setTarget(e.target.value)} className="w-40 flex-1 sm:flex-none">
-              <option value="">Choose rep…</option>
-              {reps.map((r) => (
+              <option value="">Choose seller…</option>
+              {sellers.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {r.displayName} ({r.assigned})
+                  {who(r)} ({r.assigned})
                 </option>
               ))}
             </Select>
             <Button size="sm" disabled={!target || busy} onClick={() => assign({ userId: target })}>
               <UserPlus size={14} /> Assign
+            </Button>
+            <Button
+              size="sm"
+              disabled={busy || !me}
+              onClick={async () => {
+                if (me && (await assign({ userId: me.id, force: true }))) router.push(`/rep/outreach${area !== "all" ? `?area=${encodeURIComponent(area)}` : ""}`);
+              }}
+            >
+              <Send size={14} /> Message these now
             </Button>
             <Button size="sm" variant="subtle" disabled={busy || reps.length < 2} onClick={() => assign({ userIds: reps.map((r) => r.id) })}>
               <Shuffle size={14} /> Split across all reps

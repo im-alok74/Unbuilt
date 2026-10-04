@@ -1,3 +1,4 @@
+import { requireSession, STAFF } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
 import { regenerateCopy } from "@/lib/sites";
 import { getBusinessRow } from "@/lib/rows";
@@ -9,6 +10,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const _auth = await requireSession(STAFF);
+  if (_auth instanceof NextResponse) return _auth;
   const { id } = await params;
   const body = (await req.json().catch(() => null)) as { brief?: unknown } | null;
   const extraBrief =

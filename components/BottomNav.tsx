@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, MapPin, User, Users, ListChecks, Bug } from "lucide-react";
+import { Home, MapPin, User, Users, ListChecks, Bug, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { key: "home", label: "Home", icon: Home, href: "/home" },
   { key: "pool", label: "Leads", icon: ListChecks, href: "/pool" },
   { key: "drop", label: "Find", icon: MapPin, href: "/map" },
+  { key: "sales", label: "Sales", icon: Briefcase, href: "/rep" },
   { key: "team", label: "Team", icon: Users, href: "/team" },
   { key: "issues", label: "Issues", icon: Bug, href: "/issues" },
   { key: "you", label: "You", icon: User, href: "/you" },

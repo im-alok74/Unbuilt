@@ -17,7 +17,7 @@ import {
   inr,
   getPackage,
 } from "@/lib/packages";
-import { toWhatsappNumber, whatsappLink } from "@/lib/whatsapp";
+import { waNumber, whatsappLink } from "@/lib/whatsapp";
 import type { BusinessRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,7 @@ export function QuoteBuilder({ b, repName, onSaved }: { b: BusinessRow; repName:
   const shown = price ?? s.price;
   const pkg = packageForPrice(shown);
   const tooLow = shown < s.low;
-  const wa = toWhatsappNumber(b.phone);
+  const wa = waNumber(b);
 
   // when the answers change, snap back to the new suggestion
   React.useEffect(() => setPrice(null), [kind, pages, extras.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps

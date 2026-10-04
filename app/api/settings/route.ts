@@ -4,13 +4,15 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { settings } from "@/lib/db/schema";
 import { getSettingsRow } from "@/lib/settings";
-import { requireSession } from "@/lib/session";
+import { requireSession, STAFF } from "@/lib/session";
 import { encryptSecret, decryptSecret, maskSecret, hashPin } from "@/lib/crypto";
 import { DEFAULT_PRIORITY_CATEGORIES, DEFAULT_SCORING_WEIGHTS } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const _auth = await requireSession(STAFF);
+  if (_auth instanceof NextResponse) return _auth;
   const row = await getSettingsRow();
   return NextResponse.json({
     llmProvider: row.llmProvider,

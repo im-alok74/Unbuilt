@@ -1,3 +1,4 @@
+import { requireSession, STAFF } from "@/lib/session";
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -17,6 +18,8 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const _auth = await requireSession(STAFF);
+  if (_auth instanceof NextResponse) return _auth;
   const { id } = await params;
   const site = await getSite(id);
   if (!site) return NextResponse.json({ error: "not found" }, { status: 404 });

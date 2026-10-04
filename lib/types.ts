@@ -16,6 +16,16 @@ export const STAGE_LABELS: Record<Stage, string> = {
   won: "Won",
   lost: "Lost",
 };
+/**
+ * Pipeline moves. Open stages move freely; won/lost are terminal for reps and
+ * only staff (manager/admin) may reopen them.
+ */
+export function canMove(from: Stage, to: Stage, staff: boolean): boolean {
+  if (from === to) return true;
+  if (from === "won" || from === "lost") return staff;
+  return true;
+}
+
 /** Legacy lead status (map pin colour) derived from the rep pipeline stage. */
 export function stageToStatus(s: Stage): LeadStatus {
   if (s === "won") return "won";
@@ -189,6 +199,7 @@ export interface BusinessRow {
   categoryLabel: string | null;
   types: string[];
   address: string | null;
+  area: string | null;
   lat: number | null;
   lng: number | null;
   phone: string | null;

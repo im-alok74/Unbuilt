@@ -1,3 +1,4 @@
+import { requireSession, STAFF } from "@/lib/session";
 import { NextResponse } from "next/server";
 import { sql, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -8,6 +9,8 @@ import { monthlyUsage } from "@/lib/places";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const _auth = await requireSession(STAFF);
+  if (_auth instanceof NextResponse) return _auth;
   const cfg = await getConfig();
 
   const [counts] = await db

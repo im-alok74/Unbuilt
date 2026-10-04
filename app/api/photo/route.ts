@@ -1,4 +1,7 @@
 import { NextRequest } from "next/server";
+import { sql } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { businesses } from "@/lib/db/schema";
 import { getConfig } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +16,19 @@ const MAX_AGE = 60 * 60 * 24 * 30;
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
   const name = p.get("name");
-  const w = Math.min(Math.max(Number(p.get("w") ?? "800"), 100), 1600);
+  const wn = Number(p.get("w") ?? "800");
+  const w = Math.min(Math.max(Number.isFinite(wn) ? Math.round(wn) : 800, 50), 1600);
 
-  if (!name || !/^places\/[^/]+\/photos\/[^/]+$/.test(name)) {
+  if (!name || !/^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/.test(name)) {
     return new Response("bad name", { status: 400 });
   }
+  // Only proxy photos we actually stored, so this can't be used to drain Places quota.
+  const known = await db
+    .select({ id: businesses.id })
+    .from(businesses)
+    .where(sql`${businesses.photosJson} @> ${JSON.stringify([{ name }])}::jsonb`)
+    .limit(1);
+  if (!known.length) return new Response("not found", { status: 404 });
 
   const cfg = await getConfig();
   if (!cfg.placesApiKey) {

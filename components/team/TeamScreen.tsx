@@ -308,9 +308,9 @@ function DncTab() {
     <div className="space-y-3">
       <p className="text-xs text-gray-500">Numbers here are skipped by imports and assignment. Reps add to it automatically with “Wrong number”.</p>
       <div className="flex gap-2">
-        <Input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number" />
+        <Input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+971 50 123 4567 (include +country code)" />
         <Button
-          disabled={phone.replace(/\D/g, "").length < 10}
+          disabled={phone.replace(/\D/g, "").length < 8}
           onClick={async () => {
             const r = await fetch("/api/dnc", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, reason: "manager" }) });
             push(r.ok ? "Added" : "Invalid number", r.ok ? "success" : "error");
@@ -325,7 +325,7 @@ function DncTab() {
         {data?.dnc.map((n) => (
           <div key={n.phone} className="flex items-center justify-between px-3.5 py-2.5 text-sm">
             <span className="tabular-nums text-gray-900">{n.phone} <span className="text-xs text-gray-400">{n.reason}</span></span>
-            <button className="text-xs text-gray-400 underline" onClick={async () => { await fetch(`/api/dnc?phone=${n.phone}`, { method: "DELETE" }); mutate(); }}>Remove</button>
+            <button className="text-xs text-gray-400 underline" onClick={async () => { await fetch(`/api/dnc?phone=${encodeURIComponent(n.phone)}`, { method: "DELETE" }); mutate(); }}>Remove</button>
           </div>
         ))}
         {data && data.dnc.length === 0 && <p className="py-8 text-center text-xs text-gray-400">Empty.</p>}
