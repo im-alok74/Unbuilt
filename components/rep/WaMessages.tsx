@@ -4,6 +4,7 @@ import * as React from "react";
 import { MessageCircle, Send } from "lucide-react";
 import { sendOrQueue } from "@/lib/offline";
 import { waTemplates } from "@/lib/wamessages";
+import { firstPitch } from "@/lib/wapitch";
 import { waNumber, whatsappLink } from "@/lib/whatsapp";
 import type { BusinessRow } from "@/lib/types";
 
@@ -12,9 +13,14 @@ export function WaMessages({ b, repName, onSent }: { b: BusinessRow; repName: st
   const wa = waNumber(b);
   const [open, setOpen] = React.useState(false);
   const demo = b.siteSlug ? `${location.origin}/s/${b.siteSlug}` : "";
-  const list = waTemplates({ business: b.name, rep: repName, rating: b.rating, hasWebsite: b.websiteStatus === "real", demoUrl: demo }).filter(
-    (t) => t.id !== "demo" || demo,
-  );
+  const list = waTemplates({ business: b.name, rep: repName, rating: b.rating, hasWebsite: b.websiteStatus === "real", demoUrl: demo })
+    .filter((t) => t.id !== "demo" || demo)
+    // the intro is the same niche-specific owner pitch used everywhere else
+    .map((t) =>
+      t.id === "intro"
+        ? { ...t, text: firstPitch({ name: b.name, category: b.category, types: b.types, area: b.area, address: b.address, rating: b.rating, hasWebsite: b.websiteStatus === "real", demoUrl: demo || undefined, rep: repName }) }
+        : t,
+    );
 
   async function send(id: string, text: string) {
     if (!wa) return;
