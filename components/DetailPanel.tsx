@@ -28,7 +28,7 @@ import { SITE_STATUS_LABELS } from "@/lib/types";
 import { formatINR, timeAgo } from "@/lib/utils";
 
 export function DetailPanel() {
-  const { detailId, closeDetail, refreshAll } = useApp();
+  const { detailId, closeDetail, dismissDetail, refreshAll } = useApp();
   const { business: b, isLoading, refresh } = useBusiness(detailId);
   const router = useRouter();
   const { push } = useToast();
@@ -75,13 +75,13 @@ export function DetailPanel() {
     if (!b) return;
     if (b.siteId) {
       router.push(`/build?lead=${b.id}`);
-      closeDetail();
+      dismissDetail();
       return;
     }
     setBuilding(true);
     try {
       router.push(`/build?lead=${b.id}&new=1`);
-      closeDetail();
+      dismissDetail();
     } finally {
       setBuilding(false);
     }

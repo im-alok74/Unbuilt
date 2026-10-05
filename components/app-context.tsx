@@ -49,6 +49,8 @@ interface AppState {
   detailId: string | null;
   openDetail: (id: string) => void;
   closeDetail: () => void;
+  /** Hide the panel without touching history (use right after navigating away). */
+  dismissDetail: () => void;
   /** Compact pin card shown on the map before the full panel. */
   previewId: string | null;
   openPreview: (id: string) => void;
@@ -116,13 +118,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [mutate]);
 
+  // The lead panel gets its own history entry, so the phone's Back button closes it instead of leaving the screen.
+  const detailOpen = React.useRef(false);
+  detailOpen.current = detailId !== null;
+  React.useEffect(() => {
+    const onPop = () => setDetailId(null);
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   const value: AppState = {
     detailId,
     openDetail: (id: string) => {
       setPreviewId(null);
+      // keep Next's own history state (spread) or its router reloads the page on Back
+      if (!detailOpen.current) window.history.pushState({ ...window.history.state, unbuiltDetail: true }, "");
       setDetailId(id);
     },
-    closeDetail: () => setDetailId(null),
+    dismissDetail: () => setDetailId(null),
+    closeDetail: () => {
+      if (window.history.state?.unbuiltDetail) window.history.back(); // popstate then clears detailId
+      else setDetailId(null);
+    },
     previewId,
     openPreview: (id: string) => {
       setDetailId(null);
