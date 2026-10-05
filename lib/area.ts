@@ -1,3 +1,22 @@
+// US states by postal abbreviation, so a Florida address resolves to the US (and to "Florida") even without "USA".
+const US_STATES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut",
+  DE: "Delaware", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan",
+  MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire",
+  NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma",
+  OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
+  TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+};
+const US_ABBR = Object.keys(US_STATES).join("|");
+// ", FL" with no ZIP counts too, except abbreviations that are everyday words ("in", "or", "me"…)
+const US_ABBR_COMMA = Object.keys(US_STATES)
+  .filter((k) => !["IN", "OR", "ME", "OK", "HI", "ID", "LA", "MA", "PA", "AL", "CO", "DE", "OH", "NE"].includes(k))
+  .join("|");
+const US_NAMES = Object.values(US_STATES).join("|");
+// "USA", a state name, or "FL 33139" (state + ZIP)
+const US_RE = new RegExp(String.raw`\busa\b|united states|\b(?:${US_NAMES})\b|\b(?:${US_ABBR})\s\d{5}\b|,\s*(?:${US_ABBR_COMMA})\b`, "i");
+
 // Known markets: the area a lead is filed under, and the WhatsApp country code for it.
 // Add a line to support a new market.
 const PLACES: { name: string; re: RegExp; cc: string }[] = [
@@ -13,7 +32,7 @@ const PLACES: { name: string; re: RegExp; cc: string }[] = [
   { name: "Bahrain", re: /bahrain|manama/i, cc: "973" },
   { name: "Singapore", re: /singapore/i, cc: "65" },
   { name: "UK", re: /london|\buk\b|united kingdom|england/i, cc: "44" },
-  { name: "USA", re: /\busa\b|united states|new york|california|texas/i, cc: "1" },
+  { name: "USA", re: US_RE, cc: "1" },
   { name: "Canada", re: /canada|toronto/i, cc: "1" },
   { name: "Australia", re: /australia|sydney|melbourne/i, cc: "61" },
 ];
@@ -50,6 +69,7 @@ export function deriveArea(address: string | null | undefined): string | null {
   const a = address?.trim();
   if (!a) return null;
   const hit = placeIn(a);
+  if (hit?.name === "USA") return usState(a) ?? "USA"; // file US leads by state: Florida, Texas…
   if (hit) return hit.name;
   const parts = a.split(",").map((s) => s.trim()).filter((p) => p && !/^india$/i.test(p));
   if (parts.length > 1 && /\d/.test(parts[parts.length - 1])) parts.pop(); // state + pin
@@ -84,4 +104,12 @@ export function normPhone(phone: string | null | undefined, hint?: string | null
   // typed with the country code but no "+", e.g. 971501234567
   if (!intl && nat.startsWith(cc) && nat.length - cc.length >= 8) nat = nat.slice(cc.length);
   return nat.length >= 6 ? "+" + cc + nat : "";
+}
+
+/** The US state in an address ("…, Miami, FL 33139" or "Tampa, Florida"), else null. */
+function usState(a: string): string | null {
+  const abbr = a.match(new RegExp(String.raw`\b(${US_ABBR})\s\d{5}\b|,\s*(${US_ABBR_COMMA})\b`, "i"))?.slice(1).find(Boolean)?.toUpperCase();
+  if (abbr) return US_STATES[abbr];
+  const named = Object.values(US_STATES).filter((n) => new RegExp(String.raw`\b${n}\b`, "i").test(a));
+  return named.length ? named[named.length - 1] : null;
 }

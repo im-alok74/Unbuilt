@@ -19,3 +19,16 @@ test("the place named last wins (name first, city last)", () => {
   assert.equal(deriveArea("Texas Roadhouse, Business Bay, Dubai"), "Dubai");
   assert.equal(countryCodeFor("Saudi Cafe, Pune, India"), "91");
 });
+
+test("US addresses without 'USA' still get +1 and a state area", () => {
+  assert.equal(countryCodeFor("1234 Collins Ave, Miami Beach, FL 33139"), "1");
+  assert.equal(countryCodeFor("Tampa, Florida"), "1");
+  assert.equal(deriveArea("1234 Collins Ave, Miami Beach, FL 33139, USA"), "Florida");
+  assert.equal(deriveArea("Tampa, Florida"), "Florida");
+  assert.equal(countryCodeFor("Shop 4, Pune, Maharashtra 411001, India"), "91");
+});
+
+test("', FL' without a ZIP is Florida; ordinary words are not states", () => {
+  assert.equal(deriveArea("Orlando, FL, United States"), "Florida");
+  assert.equal(countryCodeFor("Shop 3, in the Mall, Pune"), "91");
+});
