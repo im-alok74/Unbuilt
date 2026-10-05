@@ -7,7 +7,6 @@ import { Home, List, Send, PlusCircle, BarChart3, WifiOff, LayoutDashboard } fro
 import { useSWRConfig } from "swr";
 import { SwrProvider } from "@/components/SwrProvider";
 import { ToastProvider, useToast } from "@/components/ui/toast";
-import { useMe } from "@/lib/hooks";
 import { flushQueue, pendingCount } from "@/lib/offline";
 import { cn } from "@/lib/utils";
 
@@ -19,12 +18,11 @@ const ITEMS = [
   { label: "Stats", icon: BarChart3, href: "/rep/stats" },
 ];
 
-function Inner({ children }: { children: React.ReactNode }) {
+function Inner({ children, isStaff }: { children: React.ReactNode; isStaff: boolean }) {
   const pathname = usePathname();
   const { push } = useToast();
   const { mutate } = useSWRConfig();
-  const me = useMe();
-  const items = me && me.role !== "rep" ? [...ITEMS, { label: "Admin", icon: LayoutDashboard, href: "/home" }] : ITEMS;
+  const items = isStaff ? [...ITEMS, { label: "Admin", icon: LayoutDashboard, href: "/home" }] : ITEMS;
   const [offline, setOffline] = React.useState(false);
 
   React.useEffect(() => {
@@ -80,10 +78,10 @@ function Inner({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function RepShell({ children }: { children: React.ReactNode }) {
+export function RepShell({ children, isStaff }: { children: React.ReactNode; isStaff: boolean }) {
   return (
     <SwrProvider><ToastProvider>
-      <Inner>{children}</Inner>
+      <Inner isStaff={isStaff}>{children}</Inner>
     </ToastProvider></SwrProvider>
   );
 }

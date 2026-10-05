@@ -12,9 +12,13 @@ import {
   ExternalLink,
   Sparkles,
   AlertTriangle,
+  MessageCircle,
 } from "lucide-react";
 import { useApp } from "@/components/app-context";
-import { useBusiness } from "@/lib/hooks";
+import { useBusiness, useMe } from "@/lib/hooks";
+import { sendOrQueue } from "@/lib/offline";
+import { firstPitch } from "@/lib/wapitch";
+import { waNumber, whatsappLink } from "@/lib/whatsapp";
 import { ScoreBreakdown } from "@/components/leads/ScoreBreakdown";
 import { StatusControl } from "@/components/StatusControl";
 import { AssignSection } from "@/components/team/AssignSection";
@@ -28,6 +32,7 @@ export function DetailPanel() {
   const { business: b, isLoading, refresh } = useBusiness(detailId);
   const router = useRouter();
   const { push } = useToast();
+  const me = useMe();
   const [notes, setNotes] = React.useState("");
   const [savingNotes, setSavingNotes] = React.useState(false);
   const [building, setBuilding] = React.useState(false);
@@ -144,6 +149,47 @@ export function DetailPanel() {
               {b.websiteStatus === "real" && <Badge tone="green">Has website</Badge>}
             </div>
 
+            {(() => {
+              const wa = waNumber(b);
+              const send = () => {
+                if (!wa) return;
+                const text = firstPitch({
+                  name: b.name,
+                  category: b.category,
+                  types: b.types,
+                  area: b.area,
+                  address: b.address,
+                  rating: b.rating,
+                  hasWebsite: b.websiteStatus === "real",
+                  demoUrl: b.siteSlug ? `${location.origin}/s/${b.siteSlug}` : undefined,
+                  rep: me?.name ?? "our team",
+                });
+                // open WhatsApp inside the tap so the browser doesn't block it, then log the send
+                window.open(whatsappLink(wa, text), "_blank", "noopener");
+                sendOrQueue(`/api/my/leads/${b.id}`, "PATCH", { log: { action: "whatsapped", detail: "First pitch" } }).then((res) => {
+                  if (res === "rejected") push("WhatsApp opened, but the send could not be saved.", "error");
+                  refresh();
+                  refreshAll();
+                });
+              };
+              return (
+                <button
+                  onClick={send}
+                  disabled={!wa}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] text-sm font-semibold text-white disabled:opacity-40"
+                >
+                  <MessageCircle size={18} /> {wa ? "Send pitch on WhatsApp" : "No phone number"}
+                </button>
+              );
+            })()}
+
+            <Button className="w-full" variant="subtle" onClick={buildSite} disabled={building}>
+              <Sparkles size={16} />
+              {b.siteId ? "Open site builder" : "Build a website for this lead"}
+            </Button>
+
+            <AssignSection b={b} onChanged={() => { refresh(); refreshAll(); }} />
+
             <div className="rounded-xl bg-gray-50 p-4">
               <ScoreBreakdown score={b.score} factors={b.scoreBreakdown} />
             </div>
@@ -217,8 +263,6 @@ export function DetailPanel() {
               </div>
             )}
 
-            <AssignSection b={b} onChanged={() => { refresh(); refreshAll(); }} />
-
             <div className="space-y-3 border-t border-gray-200 pt-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -265,10 +309,6 @@ export function DetailPanel() {
                 )}
               </div>
 
-              <Button className="w-full" onClick={buildSite} disabled={building}>
-                <Sparkles size={16} />
-                {b.siteId ? "Open site builder" : "Build a site for this lead"}
-              </Button>
             </div>
 
             <p className="text-center text-[10px] text-gray-300">
